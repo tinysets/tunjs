@@ -397,7 +397,7 @@ let testLocalProxy = async () => {
         let remoteForwardId = 1;
         await remotePortForward.startNew(remoteForwardId)
         remotePortForward.receiveRightData(Buffer.from('hello remotePortForward'), remoteForwardId)
-        remotePortForward.on('localData', (buffer: Buffer, id: number) => {
+        remotePortForward.on('leftData', (buffer: Buffer, id: number) => {
             let msgStr = buffer.toString()
             console.log(`Receive : id=${id}, ${msgStr}`);
         });

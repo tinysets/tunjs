@@ -381,6 +381,9 @@ let testLocalProxy = async () => {
     await localSession.startClient(22222, '127.0.0.1')
 
     localSession.writeBuffer('hello')
+
+    localSession.close()
+    localSession.writeBuffer('close')
 }
 
 testLocalProxy();

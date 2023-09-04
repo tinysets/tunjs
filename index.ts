@@ -1,6 +1,6 @@
 import Emitter from 'events'
 import net from 'net'
-import { LocalPortForward, PortMapCSide, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
+import { LocalPortForward, PortMapCSide, PortMapTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { App, TCPEventRouter } from './App';
 
 // import Koa from 'koa'
@@ -353,47 +353,73 @@ import { App, TCPEventRouter } from './App';
 
 let testLocalProxy = async () => {
 
-    let serverApp = new App()
-    let serverEventRouter = new TCPEventRouter()
-    serverEventRouter.use('data', async (ctx, next) => {
-        let tcpSession = ctx.tcpSession
-        let tcpBuffer = ctx.tcpBuffer
-        let msgStr = tcpBuffer.toString()
-        console.log(`Server Receive : ${msgStr}`);
-        tcpSession.writeBuffer(`server replay : ${msgStr}`);
-    })
-    serverApp.use(serverEventRouter.callback())
+    {
+        let serverApp = new App()
+        let serverEventRouter = new TCPEventRouter()
+        serverEventRouter.use('data', async (ctx, next) => {
+            let tcpSession = ctx.tcpSession
+            let tcpBuffer = ctx.tcpBuffer
+            let msgStr = tcpBuffer.toString()
+            console.log(`Server Receive : ${msgStr}`);
+            tcpSession.writeBuffer(`server replay : ${msgStr}`);
+        })
+        serverApp.use(serverEventRouter.callback())
 
-    let serverOptions = new TCPSessionOptions();
-    serverOptions.isServer = true;
-    serverOptions.isClient = false;
-    serverOptions.isTCPPacket = false;
-    let tcpServer = new TCPServer(serverOptions);
-    tcpServer.setApp(serverApp);
-    await tcpServer.start(11111)
+        let serverOptions = new TCPSessionOptions();
+        serverOptions.isServer = true;
+        serverOptions.isClient = false;
+        serverOptions.isTCPPacket = false;
+        let tcpServer = new TCPServer(serverOptions);
+        tcpServer.setApp(serverApp);
+        await tcpServer.start(11111)
+    }
 
-    let localPortForward = new LocalPortForward(22222, 11111);
-    await localPortForward.start()
+    {
+        let localPortForward = new LocalPortForward(22222, 11111);
+        await localPortForward.start()
+    }
 
-    let localOptions = new TCPSessionOptions();
-    localOptions.isServer = false;
-    localOptions.isClient = true;
-    localOptions.isTCPPacket = false;
-    let localSession = new TCPSession(localOptions, new net.Socket());
-    await localSession.startClient(22222, '127.0.0.1')
+    {
+        let localOptions = new TCPSessionOptions();
+        localOptions.isServer = false;
+        localOptions.isClient = true;
+        localOptions.isTCPPacket = false;
+        let localSession = new TCPSession(localOptions, new net.Socket());
+        await localSession.startClient(22222, '127.0.0.1')
 
-    localSession.writeBuffer('hello')
-    localSession.close()
-    localSession.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
+        localSession.writeBuffer('hello localPortForward')
+        localSession.close()
+        localSession.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
+    }
 
-    let remotePortForward = new PortMapCSide(11111);
-    let remoteForwardId = 1;
-    await remotePortForward.startNew(remoteForwardId)
-    remotePortForward.receiveRightData(Buffer.from('hello remotePortForward'), remoteForwardId)
-    remotePortForward.on('localData', (buffer: Buffer, id: number) => {
-        let msgStr = buffer.toString()
-        console.log(`Receive : id=${id}, ${msgStr}`);
-    });
+    {
+        let remotePortForward = new PortMapCSide(11111);
+        let remoteForwardId = 1;
+        await remotePortForward.startNew(remoteForwardId)
+        remotePortForward.receiveRightData(Buffer.from('hello remotePortForward'), remoteForwardId)
+        remotePortForward.on('localData', (buffer: Buffer, id: number) => {
+            let msgStr = buffer.toString()
+            console.log(`Receive : id=${id}, ${msgStr}`);
+        });
+    }
+
+    {
+        let portMapTest = new PortMapTest(11111, 33333)
+        await portMapTest.start()
+
+        let localOptions = new TCPSessionOptions();
+        localOptions.isServer = false;
+        localOptions.isClient = true;
+        localOptions.isTCPPacket = false;
+        let localSession = new TCPSession(localOptions, new net.Socket());
+        await localSession.startClient(33333, '127.0.0.1')
+
+        localSession.writeBuffer('hello portMapTest')
+        setTimeout(() => {
+            portMapTest.close()
+            localSession.writeBuffer('hello portMapTest')
+        }, 1000)
+    }
 }
 
 testLocalProxy();

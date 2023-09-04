@@ -413,9 +413,9 @@ export class PortMapCSide extends Emitter {
     leftPort: number
     map: Map<number, PortMapVConnectionCSide> = new Map()
 
-    constructor(toPort: number) {
+    constructor(leftPort: number) {
         super();
-        this.leftPort = toPort
+        this.leftPort = leftPort
     }
 
     async startNew(id: number) {
@@ -432,28 +432,38 @@ export class PortMapCSide extends Emitter {
         let succ = await vConnection.start(this.leftPort)
         if (!succ) {
             console.error(`远程代理 本地session创建失败! id=${id}`);
-            this.map.delete(id)
         }
         return succ
     }
 
     private connectionClose(id: number) {
         this.map.delete(id)
+        this.emit('closeConnection', id);
     }
 
-    receiveLeftData(buffer: Buffer, id: number) {
+    private receiveLeftData(buffer: Buffer, id: number) {
         this.emit('leftData', buffer, id)
     }
-    receiveRightData(buffer: Buffer, id: number) {
+    public receiveRightData(buffer: Buffer, id: number) {
         if (this.map.has(id)) {
             var vConnection = this.map.get(id);
             vConnection.onRightData(buffer);
         }
     }
-    receiveRightClose(id: number) {
+    public receiveRightClose(id: number) {
         if (this.map.has(id)) {
             var vConnection = this.map.get(id);
             vConnection.onRightClose();
+        }
+    }
+
+    public close() {
+        let vConnections: PortMapVConnectionCSide[] = [];
+        for (const item of this.map.values()) {
+            vConnections.push(item)
+        }
+        for (const item of vConnections) {
+            item.close()
         }
     }
 }
@@ -486,10 +496,8 @@ export class PortMapVConnectionCSide extends Emitter {
         this.isLeftConnected = succ;
         if (!succ) {
             this.closeConnection()
-            // @TODO 通过隧道发送失败事件
         } else {
             this.tryExecQueue()
-            // @TODO 通过隧道发送成功事件
         }
         return succ;
     }
@@ -550,7 +558,7 @@ export class PortMapVConnectionCSide extends Emitter {
     }
 
     private leftData(buffer: Buffer) {
-        this.emit('leftData', buffer, this.id)// @TODO 通过隧道发送数据
+        this.emit('leftData', buffer, this.id)
     }
 
     private closeConnection() {
@@ -561,7 +569,11 @@ export class PortMapVConnectionCSide extends Emitter {
             this.left = null;
             left.close()
         }
-        this.emit('close', this.id)// @TODO 通过隧道发送连接关闭事件
+        this.emit('close', this.id)
+    }
+
+    public close() {
+        this.closeConnection()
     }
 }
 
@@ -595,31 +607,44 @@ export class PortMapSSide extends Emitter {
     }
     public static UID = 1;
     private onNewRemoteSession(rometeSession: TCPSession) {
-        let uid = PortMapSSide.UID++
-        let vConnection = new PortMapVConnectionSSide(uid, rometeSession);
+        let id = PortMapSSide.UID++
+        let vConnection = new PortMapVConnectionSSide(id, rometeSession);
         vConnection.on('close', this.connectionClose.bind(this))
         vConnection.on('rightData', this.receiveRightData.bind(this))
-        this.map.set(uid, vConnection)
+        this.map.set(id, vConnection)
         vConnection.start();
+        this.emit('newConnection', id);
     }
 
     private connectionClose(id: number) {
         this.map.delete(id)
+        this.emit('closeConnection', id);
     }
-    receiveRightData(buffer: Buffer, id: number) {
+    private receiveRightData(buffer: Buffer, id: number) {
         this.emit('rightData', buffer, id)
     }
-    receiveLeftData(buffer: Buffer, id: number) {
+    public receiveLeftData(buffer: Buffer, id: number) {
         if (this.map.has(id)) {
             var vConnection = this.map.get(id);
             vConnection.onLeftData(buffer);
         }
     }
-    receiveLeftClose(id: number) {
+    public receiveLeftClose(id: number) {
         if (this.map.has(id)) {
             var vConnection = this.map.get(id);
             vConnection.onLeftClose();
         }
+    }
+
+    public close() {
+        let vConnections: PortMapVConnectionSSide[] = [];
+        for (const item of this.map.values()) {
+            vConnections.push(item)
+        }
+        for (const item of vConnections) {
+            item.close()
+        }
+        this.tcpServer.close()
     }
 }
 export class PortMapVConnectionSSide extends Emitter {
@@ -645,7 +670,6 @@ export class PortMapVConnectionSSide extends Emitter {
             eventInfo.name = 'close'
             this.enQueue(eventInfo);
         })
-        // @TODO 通过隧道发送新连接事件
     }
 
     private eventQueue = new EventQueue();
@@ -695,7 +719,7 @@ export class PortMapVConnectionSSide extends Emitter {
     }
 
     private rightData(buffer: Buffer) {
-        this.emit('rightData', buffer, this.id)// @TODO 通过隧道发送数据
+        this.emit('rightData', buffer, this.id)
     }
 
     private leftData(buffer: Buffer) {
@@ -711,6 +735,54 @@ export class PortMapVConnectionSSide extends Emitter {
             this.right = null;
             right.close()
         }
-        this.emit('close', this.id)// @TODO 通过隧道发送连接关闭事件
+        this.emit('close', this.id)
+    }
+    public close() {
+        this.closeConnection()
+    }
+}
+
+
+export class PortMapTest {
+
+    private portMapCSide: PortMapCSide
+    private portMapSSide: PortMapSSide
+    private leftPort: number
+    private rightPort: number
+    constructor(leftPort: number, rightPort: number) {
+        this.leftPort = leftPort
+        this.rightPort = rightPort
+    }
+
+    async start() {
+        this.portMapCSide = new PortMapCSide(this.leftPort)
+        this.portMapSSide = new PortMapSSide(this.rightPort)
+
+        this.portMapSSide.on('newConnection', (id: number) => {
+            this.portMapCSide.startNew(id);
+        })
+        this.portMapSSide.on('closeConnection', (id: number) => {
+            this.portMapCSide.receiveRightClose(id);
+        })
+        this.portMapSSide.on('rightData', (buffer: Buffer, id: number) => {
+            this.portMapCSide.receiveRightData(buffer, id);
+        })
+
+        this.portMapCSide.on('closeConnection', (id: number) => {
+            this.portMapSSide.receiveLeftClose(id);
+        })
+        this.portMapCSide.on('leftData', (buffer: Buffer, id: number) => {
+            this.portMapSSide.receiveLeftData(buffer, id);
+        })
+
+        await this.portMapSSide.start()
+    }
+    close() {
+        if (this.portMapCSide) {
+            this.portMapCSide.close();
+        }
+        if (this.portMapSSide) {
+            this.portMapCSide.close();
+        }
     }
 }

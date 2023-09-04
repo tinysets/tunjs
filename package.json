@@ -12,7 +12,8 @@
     "delegates": "^1.0.0",
     "koa": "^2.14.2",
     "koa-compose": "^4.1.0",
-    "koa-websocket": "^7.0.0"
+    "koa-websocket": "^7.0.0",
+    "once": "^1.4.0"
   },
   "devDependencies": {
     "@types/node": "^20.5.9"

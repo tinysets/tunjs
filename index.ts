@@ -7,52 +7,6 @@ import { buffer } from 'stream/consumers'
 
 let koaApp = new Koa();
 
-interface Context {
-    tcpEvent?: string
-    tcpSession?: TCPSession
-    tcpPacket?: TCPPacket
-    tcpBuffer?: Buffer
-    tcpError?: Error
-}
-
-let context = {}
-
-
-class Application extends Emitter {
-
-    middleware: any[]
-    context: Context
-    constructor() {
-        super();
-        this.middleware = [];
-        this.context = Object.create(context);
-    }
-
-    use(fn) {
-        this.middleware.push(fn);
-        return this;
-    }
-
-    callback() {
-        const fn = compose(this.middleware);
-        const handleRequest = (ctx: Context) => {
-            return this.handleRequest(ctx, fn);
-        };
-        return handleRequest;
-    }
-
-    createContext() {
-        const context = Object.create(this.context);
-        context.app = this;
-        return context as Context;
-    }
-
-    handleRequest(ctx: Context, fnMiddleware) {
-        const onerror = err => console.error(err);
-        const handleResponse = () => { };
-        return fnMiddleware(ctx).then(handleResponse).catch(onerror);
-    }
-}
 
 class TCPServer extends Emitter {
     app: Application
@@ -228,47 +182,6 @@ class TCPSession extends Emitter {
     }
 }
 
-class TCPEventRouter {
-    private map = new Map()
-    use(event: string, fn) {
-        this.map[event] = fn
-    }
-    callback() {
-        return (ctx: Context, next) => {
-            let event = ctx.tcpEvent;
-            if (this.map[event] != null) {
-                let fn = this.map[event];
-                fn(ctx, next)
-            } else {
-                next();
-            }
-        };
-    }
-}
-
-class TCPPacketRouter {
-    private map = new Map()
-    use(cmd: number, fn) {
-        this.map[cmd] = fn
-    }
-    callback() {
-        return (ctx: Context, next) => {
-            if (ctx.tcpEvent == "packet") {
-                let tcpPacket = ctx.tcpPacket;
-                var cmd = tcpPacket.Cmd;
-                if (this.map[cmd] != null) {
-                    let fn = this.map[cmd];
-                    fn(ctx, next)
-                } else {
-                    next();
-                }
-            } else {
-                next();
-            }
-        };
-    }
-}
-
 
 interface ServerForwardedInfo {
     tcpSession: TCPSession
@@ -345,17 +258,17 @@ class ServerForwardManager {
     }
 
     public ForwardData(targetTCPSession: TCPSession, tcpForwardData: TCPForwardData) {
-        for (const forwarded of this.forwardeds) {
-            for (const forwarded of this.forwardeds) {
-                if (forwarded.forwardInfo.type == tcpForwardData.forwardInfo.type) {
-                    if (forwarded.forwardInfo.serverPort == tcpForwardData.forwardInfo.serverPort) {
-                        if (forwarded.tcpSession == tcpForwardData.sessionPort) {
+        // for (const forwarded of this.forwardeds) {
+        //     for (const forwarded of this.forwardeds) {
+        //         if (forwarded.forwardInfo.type == tcpForwardData.forwardInfo.type) {
+        //             if (forwarded.forwardInfo.serverPort == tcpForwardData.forwardInfo.serverPort) {
+        //                 if (forwarded.tcpSession == tcpForwardData.sessionPort) {
 
-                        }
-                    }
-                }
-            }
-        }
+        //                 }
+        //             }
+        //         }
+        //     }
+        // }
     }
 }
 
@@ -427,16 +340,16 @@ class ClientForwardManager {
     }
 
     public ForwardData(targetTCPSession: TCPSession, tcpForwardData: TCPForwardData) {
-        for (const forwarded of this.forwardeds) {
-            if (forwarded.tcpForwardConnected.forwardInfo.type == tcpForwardConnected.forwardInfo.type) {
-                if (forwarded.tcpForwardConnected.forwardInfo.serverPort == tcpForwardConnected.forwardInfo.serverPort) {
-                    if (forwarded.tcpForwardConnected.sessionPort == tcpForwardConnected.sessionPort) {
-                        console.error('本地端口转发连接已创建')
-                        return;
-                    }
-                }
-            }
-        }
+        // for (const forwarded of this.forwardeds) {
+        //     if (forwarded.tcpForwardConnected.forwardInfo.type == tcpForwardConnected.forwardInfo.type) {
+        //         if (forwarded.tcpForwardConnected.forwardInfo.serverPort == tcpForwardConnected.forwardInfo.serverPort) {
+        //             if (forwarded.tcpForwardConnected.sessionPort == tcpForwardConnected.sessionPort) {
+        //                 console.error('本地端口转发连接已创建')
+        //                 return;
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     public OnClose(targetTCPSession: TCPSession) {

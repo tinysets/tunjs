@@ -145,6 +145,7 @@ export class TCPSession extends Emitter {
             });
             socket.on("ready", () => {
                 resolve(true)
+                this.onReady();
             });
             socket.on("data", (data) => {
                 this.onData(data);
@@ -170,11 +171,13 @@ export class TCPSession extends Emitter {
     }
 
     write(packet: TCPPacket) {
-        this.socket.write(packet.GetSendBuffer());
+        if (packet)
+            this.socket.write(packet.GetSendBuffer());
     }
 
     writeBuffer(buffer: Uint8Array | string) {
-        this.socket.write(buffer);
+        if (buffer)
+            this.socket.write(buffer);
     }
 
     close() {
@@ -182,27 +185,38 @@ export class TCPSession extends Emitter {
     }
 
     private onData(buffer: Buffer) {
+        this.emit('data', buffer, this)
+        if (this.eventEmiter) {
+            this.ctx.tcpEvent = "data"
+            this.ctx.tcpBuffer = buffer
+            this.eventEmiter(this.ctx)
+        }
+
         if (this.options.isTCPPacket) {
             this.bufferHandler.put(buffer);
-            let tcpPacket = this.bufferHandler.tryGetMsgPacket()
-            if (tcpPacket) {
-                this.emit('packet', tcpPacket, this)
-                if (this.eventEmiter) {
-                    this.ctx.tcpEvent = "packet"
-                    this.ctx.tcpPacket = tcpPacket
-                    this.eventEmiter(this.ctx)
+            while (true) {
+                let tcpPacket = this.bufferHandler.tryGetMsgPacket()
+                if (tcpPacket) {
+                    this.emit('packet', tcpPacket, this)
+                    if (this.eventEmiter) {
+                        this.ctx.tcpEvent = "packet"
+                        this.ctx.tcpPacket = tcpPacket
+                        this.eventEmiter(this.ctx)
+                    }
+                } else {
+                    break;
                 }
-            }
-        } else {
-            this.emit('data', buffer, this)
-            if (this.eventEmiter) {
-                this.ctx.tcpEvent = "data"
-                this.ctx.tcpBuffer = buffer
-                this.eventEmiter(this.ctx)
             }
         }
     }
 
+    private onReady() {
+        this.emit('ready', this)
+        if (this.eventEmiter) {
+            this.ctx.tcpEvent = "ready"
+            this.eventEmiter(this.ctx)
+        }
+    }
     private onClose() {
         this.socket.destroy();
         this.emitCloseEventOnce();

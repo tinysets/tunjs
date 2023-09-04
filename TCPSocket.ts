@@ -259,7 +259,7 @@ export class LocalPortForward extends Emitter {
         return succ
     }
 
-    private onNewRemoteSession(rometeSession: TCPSession,) {
+    private onNewRemoteSession(rometeSession: TCPSession) {
         let virtualConnection = new LocalVirtualConnection(rometeSession, this.toPort);
         virtualConnection.start();
     }
@@ -408,9 +408,9 @@ export class LocalVirtualConnection extends Emitter {
 }
 
 
-export class RemotePortForward extends Emitter {
+export class RemotePortForwardClientSide extends Emitter {
     toPort: number
-    map: Map<number, RemoteVirtualConnection> = new Map()
+    map: Map<number, RemoteVirtualConnectionClientSide> = new Map()
 
     constructor(toPort: number) {
         super();
@@ -423,7 +423,7 @@ export class RemotePortForward extends Emitter {
         options.isClient = true;
         options.isTCPPacket = false;
         let localSession = new TCPSession(options, new net.Socket());
-        let virtualConnection = new RemoteVirtualConnection(id, localSession);
+        let virtualConnection = new RemoteVirtualConnectionClientSide(id, localSession);
         virtualConnection.on('close', this.connectionClose.bind(this))
         virtualConnection.on('localData', this.receiveLocalData.bind(this))
         this.map.set(id, virtualConnection)
@@ -454,10 +454,9 @@ export class RemotePortForward extends Emitter {
             virtualConnection.onRemoteClose();
         }
     }
-
 }
 
-export class RemoteVirtualConnection extends Emitter {
+export class RemoteVirtualConnectionClientSide extends Emitter {
     private id: number
     private isLocalConnected = false
     private localSession: TCPSession
@@ -485,8 +484,10 @@ export class RemoteVirtualConnection extends Emitter {
         this.isLocalConnected = succ;
         if (!succ) {
             this.closeConnection()
+            // @TODO 通过隧道发送失败事件
         } else {
             this.tryExecQueue()
+            // @TODO 通过隧道发送成功事件
         }
         return succ;
     }
@@ -548,6 +549,7 @@ export class RemoteVirtualConnection extends Emitter {
 
     private localData(buffer: Buffer) {
         this.emit('localData', buffer, this.id)
+        // @TODO 通过隧道发送数据
     }
 
     private closeConnection() {
@@ -559,5 +561,136 @@ export class RemoteVirtualConnection extends Emitter {
             localSession.close()
         }
         this.emit('close', this.id)
+        // @TODO 通过隧道发送连接关闭事件
+    }
+}
+
+export class RemotePortForwardServerSide extends Emitter {
+
+    fromPort: number
+    tcpServer: TCPServer
+
+    constructor(fromPort: number) {
+        super();
+        this.fromPort = fromPort
+    }
+
+    async start() {
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let tcpServer = this.tcpServer = new TCPServer(options);
+        let succ = await tcpServer.start(this.fromPort)
+        if (!succ) {
+            console.error('本地代理启动失败!');
+        } else {
+            tcpServer.on('connection', (rometeSession: TCPSession) => {
+                this.onNewRemoteSession(rometeSession)
+            })
+        }
+        return succ
+    }
+    public static UID = 1;
+    private onNewRemoteSession(rometeSession: TCPSession) {
+        let uid = RemotePortForwardServerSide.UID++
+        let virtualConnection = new RemoteVirtualConnectionServerSide(uid, rometeSession);
+        virtualConnection.start();
+    }
+}
+
+
+export class RemoteVirtualConnectionServerSide extends Emitter {
+    private id: number
+    private rometeSession: TCPSession
+    constructor(id: number, rometeSession: TCPSession) {
+        super();
+        this.id = id
+        this.rometeSession = rometeSession;
+    }
+
+    start() {
+        this.rometeSession.on('data', (buffer) => {
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Remote
+            eventInfo.name = 'data'
+            eventInfo.buffer = buffer
+            this.enQueue(eventInfo);
+        })
+        this.rometeSession.on('close', () => {
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Remote
+            eventInfo.name = 'close'
+            this.enQueue(eventInfo);
+        })
+        // @TODO 通过隧道发送新连接事件
+    }
+
+    private eventQueue = new EventQueue();
+    private enQueue(evnet: EventInfo) {
+        this.eventQueue.EnQueue(evnet)
+        this.tryExecQueue()
+    }
+    private tryExecQueue() {
+        while (true) {
+            if (this.eventQueue.length == 0) {
+                break;
+            }
+            if (this.rometeSession == null) {
+                break;
+            }
+
+            let evnet = this.eventQueue.DeQueue()
+            if (evnet.type == EventInfoType.Local) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.localData(evnet.buffer)
+                }
+            } else if (evnet.type == EventInfoType.Remote) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.remoteData(evnet.buffer)
+                }
+            }
+        }
+    }
+
+    public onLocalClose() {
+        let eventInfo = new EventInfo();
+        eventInfo.type = EventInfoType.Local
+        eventInfo.name = 'close'
+        this.enQueue(eventInfo);
+    }
+
+    public onLocalData(buffer: Buffer) {
+        let eventInfo = new EventInfo();
+        eventInfo.type = EventInfoType.Local
+        eventInfo.name = 'data'
+        eventInfo.buffer = buffer
+        this.enQueue(eventInfo);
+    }
+
+    private remoteData(buffer: Buffer) {
+        this.emit('remoteData', buffer, this.id)
+        // @TODO 通过隧道发送数据
+    }
+
+    private localData(buffer: Buffer) {
+        if (this.rometeSession != null) {
+            this.rometeSession.writeBuffer(buffer)
+        }
+    }
+
+    private closeConnection() {
+        this.eventQueue.Clear()
+        let rometeSession = this.rometeSession
+        if (rometeSession) {
+            this.rometeSession = null;
+            rometeSession.close()
+        }
+        this.emit('close', this.id)
+        // @TODO 通过隧道发送连接关闭事件
     }
 }

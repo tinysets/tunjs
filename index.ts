@@ -1,6 +1,6 @@
 import Emitter from 'events'
 import net from 'net'
-import { LocalPortForward, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
+import { LocalPortForward, RemotePortForward, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { App, TCPEventRouter } from './App';
 
 // import Koa from 'koa'
@@ -358,7 +358,9 @@ let testLocalProxy = async () => {
     serverEventRouter.use('data', async (ctx, next) => {
         let tcpSession = ctx.tcpSession
         let tcpBuffer = ctx.tcpBuffer
-        console.log(`Receive : ${tcpBuffer.toString()}`);
+        let msgStr = tcpBuffer.toString()
+        console.log(`Server Receive : ${msgStr}`);
+        tcpSession.writeBuffer(`server replay : ${msgStr}`);
     })
     serverApp.use(serverEventRouter.callback())
 
@@ -381,9 +383,17 @@ let testLocalProxy = async () => {
     await localSession.startClient(22222, '127.0.0.1')
 
     localSession.writeBuffer('hello')
-
     localSession.close()
-    localSession.writeBuffer('close')
+    localSession.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
+
+    let remotePortForward = new RemotePortForward(11111);
+    let remoteForwardId = 1;
+    await remotePortForward.startNew(remoteForwardId)
+    remotePortForward.receiveRemoteData(Buffer.from('hello remotePortForward'), remoteForwardId)
+    remotePortForward.on('localData', (buffer: Buffer, id: number) => {
+        let msgStr = buffer.toString()
+        console.log(`Receive : id=${id}, ${msgStr}`);
+    });
 }
 
 testLocalProxy();

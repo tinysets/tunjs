@@ -212,7 +212,7 @@ export class TCPSession extends Emitter {
         this.emitCloseEventOnce();
     }
     private onError(error: Error) {
-        console.log(error);
+        console.error(error);
         this.socket.destroy();
         this.emitCloseEventOnce();
     }
@@ -260,12 +260,39 @@ export class LocalPortForward extends Emitter {
     }
 
     private onNewRemoteSession(rometeSession: TCPSession,) {
-        let virtualConnection = new VirtualConnection(rometeSession, this.toPort);
+        let virtualConnection = new LocalVirtualConnection(rometeSession, this.toPort);
         virtualConnection.start();
     }
 }
 
-export class VirtualConnection extends Emitter {
+enum EventInfoType {
+    Local = 1,
+    Remote
+}
+class EventInfo {
+    type: EventInfoType;
+    name: string;
+    buffer?: Buffer
+}
+
+class EventQueue {
+    queue: EventInfo[] = [];
+    get length() {
+        return this.queue.length
+    }
+
+    EnQueue(evnet: EventInfo) {
+        this.queue.push(evnet);
+    }
+    DeQueue() {
+        return this.queue.shift()
+    }
+    Clear() {
+        this.queue = []
+    }
+}
+
+export class LocalVirtualConnection extends Emitter {
     rometeSession: TCPSession
     localPort: number
     localSession: TCPSession
@@ -277,10 +304,17 @@ export class VirtualConnection extends Emitter {
 
     async start() {
         this.rometeSession.on('data', (buffer) => {
-            this.remoteData(buffer)
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Remote
+            eventInfo.name = 'data'
+            eventInfo.buffer = buffer
+            this.enQueue(eventInfo);
         })
         this.rometeSession.on('close', () => {
-            this.remoteClose()
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Remote
+            eventInfo.name = 'close'
+            this.enQueue(eventInfo);
         })
 
         let options = new TCPSessionOptions();
@@ -291,40 +325,63 @@ export class VirtualConnection extends Emitter {
         let succ = await localSession.startClient(this.localPort, '127.0.0.1')
         if (!succ) {
             console.error('本地虚拟连接启动失败!');
+            this.localSession = localSession
             this.closeConnection()
         } else {
             this.localSession = localSession
             localSession.on('data', (buffer) => {
-                this.localData(buffer)
+                let eventInfo = new EventInfo();
+                eventInfo.type = EventInfoType.Local
+                eventInfo.name = 'data'
+                eventInfo.buffer = buffer
+                this.enQueue(eventInfo);
             })
             localSession.on('close', () => {
-                this.localClose()
+                let eventInfo = new EventInfo();
+                eventInfo.type = EventInfoType.Local
+                eventInfo.name = 'close'
+                this.enQueue(eventInfo);
             })
-            this.localConnected()
+            this.tryExecQueue()
         }
         return succ;
     }
 
-    private localConnected() {
-        for (const remoteBuffer of this.remoteBuffers) {
-            this.localSession.writeBuffer(remoteBuffer)
-        }
-        this.remoteBuffers = []
-
-        if (!this.rometeSession) {
-            this.closeConnection()
+    private eventQueue = new EventQueue();
+    private enQueue(evnet: EventInfo) {
+        this.eventQueue.EnQueue(evnet)
+        this.tryExecQueue()
+    }
+    private tryExecQueue() {
+        while (true) {
+            if (this.eventQueue.length == 0) {
+                break;
+            }
+            if (this.localSession == null) {
+                break;
+            }
+            if (this.rometeSession == null) {
+                break;
+            }
+            let evnet = this.eventQueue.DeQueue()
+            if (evnet.type == EventInfoType.Local) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.localData(evnet.buffer)
+                }
+            } else if (evnet.type == EventInfoType.Remote) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.remoteData(evnet.buffer)
+                }
+            }
         }
     }
 
-    private remoteClose() {
-        this.closeConnection();
-    }
-
-    private remoteBuffers: Buffer[] = []
     private remoteData(buffer: Buffer) {
-        if (!this.localSession) {
-            this.remoteBuffers.push(buffer)
-        } else {
+        if (this.localSession) {
             this.localSession.writeBuffer(buffer)
         }
     }
@@ -335,11 +392,8 @@ export class VirtualConnection extends Emitter {
         }
     }
 
-    private localClose() {
-        this.closeConnection();
-    }
-
     private closeConnection() {
+        this.eventQueue.Clear();
         let rometeSession = this.rometeSession
         let localSession = this.localSession
         if (rometeSession) {
@@ -350,5 +404,160 @@ export class VirtualConnection extends Emitter {
             this.localSession = null;
             localSession.close()
         }
+    }
+}
+
+
+export class RemotePortForward extends Emitter {
+    toPort: number
+    map: Map<number, RemoteVirtualConnection> = new Map()
+
+    constructor(toPort: number) {
+        super();
+        this.toPort = toPort
+    }
+
+    async startNew(id: number) {
+        let options = new TCPSessionOptions();
+        options.isServer = false;
+        options.isClient = true;
+        options.isTCPPacket = false;
+        let localSession = new TCPSession(options, new net.Socket());
+        let virtualConnection = new RemoteVirtualConnection(id, localSession);
+        virtualConnection.on('close', this.connectionClose.bind(this))
+        virtualConnection.on('localData', this.receiveLocalData.bind(this))
+        this.map.set(id, virtualConnection)
+        let succ = await virtualConnection.start(this.toPort)
+        if (!succ) {
+            console.error(`远程代理 本地session创建失败! id=${id}`);
+            this.map.delete(id)
+        }
+        return succ
+    }
+
+    private connectionClose(id: number) {
+        this.map.delete(id)
+    }
+
+    receiveLocalData(buffer: Buffer, id: number) {
+        this.emit('localData', buffer, id)
+    }
+    receiveRemoteData(buffer: Buffer, id: number) {
+        if (this.map.has(id)) {
+            var virtualConnection = this.map.get(id);
+            virtualConnection.onRemoteData(buffer);
+        }
+    }
+    receiveRemoteClose(id: number) {
+        if (this.map.has(id)) {
+            var virtualConnection = this.map.get(id);
+            virtualConnection.onRemoteClose();
+        }
+    }
+
+}
+
+export class RemoteVirtualConnection extends Emitter {
+    private id: number
+    private isLocalConnected = false
+    private localSession: TCPSession
+    constructor(id: number, localSession: TCPSession) {
+        super();
+        this.id = id
+        this.localSession = localSession;
+    }
+
+    async start(toPort: number) {
+        this.localSession.on('data', (buffer) => {
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Local
+            eventInfo.name = 'data'
+            eventInfo.buffer = buffer
+            this.enQueue(eventInfo);
+        })
+        this.localSession.on('close', () => {
+            let eventInfo = new EventInfo();
+            eventInfo.type = EventInfoType.Local
+            eventInfo.name = 'close'
+            this.enQueue(eventInfo);
+        })
+        let succ = await this.localSession.startClient(toPort, '127.0.0.1')
+        this.isLocalConnected = succ;
+        if (!succ) {
+            this.closeConnection()
+        } else {
+            this.tryExecQueue()
+        }
+        return succ;
+    }
+
+    private eventQueue = new EventQueue();
+    private enQueue(evnet: EventInfo) {
+        this.eventQueue.EnQueue(evnet)
+        this.tryExecQueue()
+    }
+    private tryExecQueue() {
+        while (true) {
+            if (this.eventQueue.length == 0) {
+                break;
+            }
+            if (this.localSession == null) {
+                break;
+            }
+            if (!this.isLocalConnected) {
+                break;
+            }
+
+            let evnet = this.eventQueue.DeQueue()
+            if (evnet.type == EventInfoType.Local) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.localData(evnet.buffer)
+                }
+            } else if (evnet.type == EventInfoType.Remote) {
+                if (evnet.name == 'close') {
+                    this.closeConnection()
+                } else if (evnet.name == 'data') {
+                    this.remoteData(evnet.buffer)
+                }
+            }
+        }
+    }
+
+    public onRemoteClose() {
+        let eventInfo = new EventInfo();
+        eventInfo.type = EventInfoType.Remote
+        eventInfo.name = 'close'
+        this.enQueue(eventInfo);
+    }
+
+    public onRemoteData(buffer: Buffer) {
+        let eventInfo = new EventInfo();
+        eventInfo.type = EventInfoType.Remote
+        eventInfo.name = 'data'
+        eventInfo.buffer = buffer
+        this.enQueue(eventInfo);
+    }
+
+    private remoteData(buffer: Buffer) {
+        if (this.localSession != null && this.isLocalConnected) {
+            this.localSession.writeBuffer(buffer)
+        }
+    }
+
+    private localData(buffer: Buffer) {
+        this.emit('localData', buffer, this.id)
+    }
+
+    private closeConnection() {
+        this.eventQueue.Clear()
+        this.isLocalConnected = false;
+        let localSession = this.localSession
+        if (localSession) {
+            this.localSession = null;
+            localSession.close()
+        }
+        this.emit('close', this.id)
     }
 }

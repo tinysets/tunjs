@@ -230,51 +230,16 @@ export class TCPSession extends Emitter {
     }
 }
 
-export class LocalPortForward extends Emitter {
-
-    fromPort: number
-    toPort: number
-    tcpServer: TCPServer
-
-    constructor(fromPort: number, toPort: number) {
-        super();
-        this.fromPort = fromPort
-        this.toPort = toPort
-    }
-
-    async start() {
-        let options = new TCPSessionOptions();
-        options.isServer = true;
-        options.isClient = false;
-        options.isTCPPacket = false;
-        let tcpServer = this.tcpServer = new TCPServer(options);
-        let succ = await tcpServer.start(this.fromPort)
-        if (!succ) {
-            console.error('本地代理启动失败!');
-        } else {
-            tcpServer.on('connection', (rometeSession: TCPSession) => {
-                this.onNewRemoteSession(rometeSession)
-            })
-        }
-        return succ
-    }
-
-    private onNewRemoteSession(rometeSession: TCPSession) {
-        let virtualConnection = new LocalVirtualConnection(rometeSession, this.toPort);
-        virtualConnection.start();
-    }
-}
 
 enum EventInfoType {
-    Local = 1,
-    Remote
+    Left = 1,
+    Right
 }
 class EventInfo {
     type: EventInfoType;
     name: string;
     buffer?: Buffer
 }
-
 class EventQueue {
     queue: EventInfo[] = [];
     get length() {
@@ -292,27 +257,62 @@ class EventQueue {
     }
 }
 
-export class LocalVirtualConnection extends Emitter {
-    rometeSession: TCPSession
-    localPort: number
-    localSession: TCPSession
-    constructor(rometeSession: TCPSession, localPort: number) {
+
+export class LocalPortForward extends Emitter {
+
+    rightPort: number
+    leftPort: number
+    tcpServer: TCPServer
+
+    constructor(rightPort: number, leftPort: number) {
         super();
-        this.rometeSession = rometeSession;
-        this.localPort = localPort;
+        this.rightPort = rightPort
+        this.leftPort = leftPort
     }
 
     async start() {
-        this.rometeSession.on('data', (buffer) => {
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let tcpServer = this.tcpServer = new TCPServer(options);
+        let succ = await tcpServer.start(this.rightPort)
+        if (!succ) {
+            console.error('本地代理启动失败!');
+        } else {
+            tcpServer.on('connection', (rometeSession: TCPSession) => {
+                this.onNewRemoteSession(rometeSession)
+            })
+        }
+        return succ
+    }
+
+    private onNewRemoteSession(rometeSession: TCPSession) {
+        let vConnection = new LocalVConnection(rometeSession, this.leftPort);
+        vConnection.start();
+    }
+}
+export class LocalVConnection extends Emitter {
+    right: TCPSession
+    left: TCPSession
+    leftPort: number
+    constructor(right: TCPSession, leftPort: number) {
+        super();
+        this.right = right;
+        this.leftPort = leftPort;
+    }
+
+    async start() {
+        this.right.on('data', (buffer) => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Remote
+            eventInfo.type = EventInfoType.Right
             eventInfo.name = 'data'
             eventInfo.buffer = buffer
             this.enQueue(eventInfo);
         })
-        this.rometeSession.on('close', () => {
+        this.right.on('close', () => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Remote
+            eventInfo.type = EventInfoType.Right
             eventInfo.name = 'close'
             this.enQueue(eventInfo);
         })
@@ -321,24 +321,24 @@ export class LocalVirtualConnection extends Emitter {
         options.isServer = true;
         options.isClient = false;
         options.isTCPPacket = false;
-        let localSession = new TCPSession(options, new net.Socket());
-        let succ = await localSession.startClient(this.localPort, '127.0.0.1')
+        let left = new TCPSession(options, new net.Socket());
+        let succ = await left.startClient(this.leftPort, '127.0.0.1')
         if (!succ) {
             console.error('本地虚拟连接启动失败!');
-            this.localSession = localSession
+            this.left = left
             this.closeConnection()
         } else {
-            this.localSession = localSession
-            localSession.on('data', (buffer) => {
+            this.left = left
+            left.on('data', (buffer) => {
                 let eventInfo = new EventInfo();
-                eventInfo.type = EventInfoType.Local
+                eventInfo.type = EventInfoType.Left
                 eventInfo.name = 'data'
                 eventInfo.buffer = buffer
                 this.enQueue(eventInfo);
             })
-            localSession.on('close', () => {
+            left.on('close', () => {
                 let eventInfo = new EventInfo();
-                eventInfo.type = EventInfoType.Local
+                eventInfo.type = EventInfoType.Left
                 eventInfo.name = 'close'
                 this.enQueue(eventInfo);
             })
@@ -357,64 +357,65 @@ export class LocalVirtualConnection extends Emitter {
             if (this.eventQueue.length == 0) {
                 break;
             }
-            if (this.localSession == null) {
+            if (this.left == null) {
                 break;
             }
-            if (this.rometeSession == null) {
+            if (this.right == null) {
                 break;
             }
             let evnet = this.eventQueue.DeQueue()
-            if (evnet.type == EventInfoType.Local) {
+            if (evnet.type == EventInfoType.Left) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.localData(evnet.buffer)
+                    this.leftData(evnet.buffer)
                 }
-            } else if (evnet.type == EventInfoType.Remote) {
+            } else if (evnet.type == EventInfoType.Right) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.remoteData(evnet.buffer)
+                    this.rightData(evnet.buffer)
                 }
             }
         }
     }
 
-    private remoteData(buffer: Buffer) {
-        if (this.localSession) {
-            this.localSession.writeBuffer(buffer)
+    private rightData(buffer: Buffer) {
+        if (this.left) {
+            this.left.writeBuffer(buffer)
         }
     }
 
-    private localData(buffer: Buffer) {
-        if (this.rometeSession) {
-            this.rometeSession.writeBuffer(buffer)
+    private leftData(buffer: Buffer) {
+        if (this.right) {
+            this.right.writeBuffer(buffer)
         }
     }
 
     private closeConnection() {
         this.eventQueue.Clear();
-        let rometeSession = this.rometeSession
-        let localSession = this.localSession
-        if (rometeSession) {
-            this.rometeSession = null;
-            rometeSession.close()
+        let right = this.right
+        let left = this.left
+        if (right) {
+            this.right = null;
+            right.close()
         }
-        if (localSession) {
-            this.localSession = null;
-            localSession.close()
+        if (left) {
+            this.left = null;
+            left.close()
         }
     }
 }
 
 
-export class RemotePortForwardClientSide extends Emitter {
-    toPort: number
-    map: Map<number, RemoteVirtualConnectionClientSide> = new Map()
+// PortMappingClientSide
+export class PortMapCSide extends Emitter {
+    leftPort: number
+    map: Map<number, PortMapVConnectionCSide> = new Map()
 
     constructor(toPort: number) {
         super();
-        this.toPort = toPort
+        this.leftPort = toPort
     }
 
     async startNew(id: number) {
@@ -422,12 +423,13 @@ export class RemotePortForwardClientSide extends Emitter {
         options.isServer = false;
         options.isClient = true;
         options.isTCPPacket = false;
-        let localSession = new TCPSession(options, new net.Socket());
-        let virtualConnection = new RemoteVirtualConnectionClientSide(id, localSession);
-        virtualConnection.on('close', this.connectionClose.bind(this))
-        virtualConnection.on('localData', this.receiveLocalData.bind(this))
-        this.map.set(id, virtualConnection)
-        let succ = await virtualConnection.start(this.toPort)
+        let leftSession = new TCPSession(options, new net.Socket());
+        let vConnection = new PortMapVConnectionCSide(id, leftSession);
+        vConnection.on('close', this.connectionClose.bind(this))
+        vConnection.on('leftData', this.receiveLeftData.bind(this))
+
+        this.map.set(id, vConnection)
+        let succ = await vConnection.start(this.leftPort)
         if (!succ) {
             console.error(`远程代理 本地session创建失败! id=${id}`);
             this.map.delete(id)
@@ -439,49 +441,49 @@ export class RemotePortForwardClientSide extends Emitter {
         this.map.delete(id)
     }
 
-    receiveLocalData(buffer: Buffer, id: number) {
-        this.emit('localData', buffer, id)
+    receiveLeftData(buffer: Buffer, id: number) {
+        this.emit('leftData', buffer, id)
     }
-    receiveRemoteData(buffer: Buffer, id: number) {
+    receiveRightData(buffer: Buffer, id: number) {
         if (this.map.has(id)) {
-            var virtualConnection = this.map.get(id);
-            virtualConnection.onRemoteData(buffer);
+            var vConnection = this.map.get(id);
+            vConnection.onRightData(buffer);
         }
     }
-    receiveRemoteClose(id: number) {
+    receiveRightClose(id: number) {
         if (this.map.has(id)) {
-            var virtualConnection = this.map.get(id);
-            virtualConnection.onRemoteClose();
+            var vConnection = this.map.get(id);
+            vConnection.onRightClose();
         }
     }
 }
-
-export class RemoteVirtualConnectionClientSide extends Emitter {
+// PortMappingVirtualConnectionClientSide
+export class PortMapVConnectionCSide extends Emitter {
     private id: number
-    private isLocalConnected = false
-    private localSession: TCPSession
-    constructor(id: number, localSession: TCPSession) {
+    private isLeftConnected = false
+    private left: TCPSession
+    constructor(id: number, left: TCPSession) {
         super();
         this.id = id
-        this.localSession = localSession;
+        this.left = left;
     }
 
-    async start(toPort: number) {
-        this.localSession.on('data', (buffer) => {
+    async start(leftPort: number) {
+        this.left.on('data', (buffer) => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Local
+            eventInfo.type = EventInfoType.Left
             eventInfo.name = 'data'
             eventInfo.buffer = buffer
             this.enQueue(eventInfo);
         })
-        this.localSession.on('close', () => {
+        this.left.on('close', () => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Local
+            eventInfo.type = EventInfoType.Left
             eventInfo.name = 'close'
             this.enQueue(eventInfo);
         })
-        let succ = await this.localSession.startClient(toPort, '127.0.0.1')
-        this.isLocalConnected = succ;
+        let succ = await this.left.startClient(leftPort, '127.0.0.1')
+        this.isLeftConnected = succ;
         if (!succ) {
             this.closeConnection()
             // @TODO 通过隧道发送失败事件
@@ -502,77 +504,77 @@ export class RemoteVirtualConnectionClientSide extends Emitter {
             if (this.eventQueue.length == 0) {
                 break;
             }
-            if (this.localSession == null) {
+            if (this.left == null) {
                 break;
             }
-            if (!this.isLocalConnected) {
+            if (!this.isLeftConnected) {
                 break;
             }
 
             let evnet = this.eventQueue.DeQueue()
-            if (evnet.type == EventInfoType.Local) {
+            if (evnet.type == EventInfoType.Left) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.localData(evnet.buffer)
+                    this.leftData(evnet.buffer)
                 }
-            } else if (evnet.type == EventInfoType.Remote) {
+            } else if (evnet.type == EventInfoType.Right) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.remoteData(evnet.buffer)
+                    this.rightData(evnet.buffer)
                 }
             }
         }
     }
 
-    public onRemoteClose() {
+    public onRightClose() {
         let eventInfo = new EventInfo();
-        eventInfo.type = EventInfoType.Remote
+        eventInfo.type = EventInfoType.Right
         eventInfo.name = 'close'
         this.enQueue(eventInfo);
     }
 
-    public onRemoteData(buffer: Buffer) {
+    public onRightData(buffer: Buffer) {
         let eventInfo = new EventInfo();
-        eventInfo.type = EventInfoType.Remote
+        eventInfo.type = EventInfoType.Right
         eventInfo.name = 'data'
         eventInfo.buffer = buffer
         this.enQueue(eventInfo);
     }
 
-    private remoteData(buffer: Buffer) {
-        if (this.localSession != null && this.isLocalConnected) {
-            this.localSession.writeBuffer(buffer)
+    private rightData(buffer: Buffer) {
+        if (this.left != null && this.isLeftConnected) {
+            this.left.writeBuffer(buffer)
         }
     }
 
-    private localData(buffer: Buffer) {
-        this.emit('localData', buffer, this.id)
-        // @TODO 通过隧道发送数据
+    private leftData(buffer: Buffer) {
+        this.emit('leftData', buffer, this.id)// @TODO 通过隧道发送数据
     }
 
     private closeConnection() {
         this.eventQueue.Clear()
-        this.isLocalConnected = false;
-        let localSession = this.localSession
-        if (localSession) {
-            this.localSession = null;
-            localSession.close()
+        this.isLeftConnected = false;
+        let left = this.left
+        if (left) {
+            this.left = null;
+            left.close()
         }
-        this.emit('close', this.id)
-        // @TODO 通过隧道发送连接关闭事件
+        this.emit('close', this.id)// @TODO 通过隧道发送连接关闭事件
     }
 }
 
-export class RemotePortForwardServerSide extends Emitter {
 
-    fromPort: number
+// PortMappingServerSide
+export class PortMapSSide extends Emitter {
+    map: Map<number, PortMapVConnectionSSide> = new Map()
+    rightPort: number
     tcpServer: TCPServer
 
-    constructor(fromPort: number) {
+    constructor(rightPort: number) {
         super();
-        this.fromPort = fromPort
+        this.rightPort = rightPort
     }
 
     async start() {
@@ -581,7 +583,7 @@ export class RemotePortForwardServerSide extends Emitter {
         options.isClient = false;
         options.isTCPPacket = false;
         let tcpServer = this.tcpServer = new TCPServer(options);
-        let succ = await tcpServer.start(this.fromPort)
+        let succ = await tcpServer.start(this.rightPort)
         if (!succ) {
             console.error('本地代理启动失败!');
         } else {
@@ -593,33 +595,53 @@ export class RemotePortForwardServerSide extends Emitter {
     }
     public static UID = 1;
     private onNewRemoteSession(rometeSession: TCPSession) {
-        let uid = RemotePortForwardServerSide.UID++
-        let virtualConnection = new RemoteVirtualConnectionServerSide(uid, rometeSession);
-        virtualConnection.start();
+        let uid = PortMapSSide.UID++
+        let vConnection = new PortMapVConnectionSSide(uid, rometeSession);
+        vConnection.on('close', this.connectionClose.bind(this))
+        vConnection.on('rightData', this.receiveRightData.bind(this))
+        this.map.set(uid, vConnection)
+        vConnection.start();
+    }
+
+    private connectionClose(id: number) {
+        this.map.delete(id)
+    }
+    receiveRightData(buffer: Buffer, id: number) {
+        this.emit('rightData', buffer, id)
+    }
+    receiveLeftData(buffer: Buffer, id: number) {
+        if (this.map.has(id)) {
+            var vConnection = this.map.get(id);
+            vConnection.onLeftData(buffer);
+        }
+    }
+    receiveLeftClose(id: number) {
+        if (this.map.has(id)) {
+            var vConnection = this.map.get(id);
+            vConnection.onLeftClose();
+        }
     }
 }
-
-
-export class RemoteVirtualConnectionServerSide extends Emitter {
+export class PortMapVConnectionSSide extends Emitter {
     private id: number
-    private rometeSession: TCPSession
-    constructor(id: number, rometeSession: TCPSession) {
+    private right: TCPSession
+    constructor(id: number, right: TCPSession) {
         super();
         this.id = id
-        this.rometeSession = rometeSession;
+        this.right = right;
     }
 
     start() {
-        this.rometeSession.on('data', (buffer) => {
+        this.right.on('data', (buffer) => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Remote
+            eventInfo.type = EventInfoType.Right
             eventInfo.name = 'data'
             eventInfo.buffer = buffer
             this.enQueue(eventInfo);
         })
-        this.rometeSession.on('close', () => {
+        this.right.on('close', () => {
             let eventInfo = new EventInfo();
-            eventInfo.type = EventInfoType.Remote
+            eventInfo.type = EventInfoType.Right
             eventInfo.name = 'close'
             this.enQueue(eventInfo);
         })
@@ -636,61 +658,59 @@ export class RemoteVirtualConnectionServerSide extends Emitter {
             if (this.eventQueue.length == 0) {
                 break;
             }
-            if (this.rometeSession == null) {
+            if (this.right == null) {
                 break;
             }
 
             let evnet = this.eventQueue.DeQueue()
-            if (evnet.type == EventInfoType.Local) {
+            if (evnet.type == EventInfoType.Left) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.localData(evnet.buffer)
+                    this.leftData(evnet.buffer)
                 }
-            } else if (evnet.type == EventInfoType.Remote) {
+            } else if (evnet.type == EventInfoType.Right) {
                 if (evnet.name == 'close') {
                     this.closeConnection()
                 } else if (evnet.name == 'data') {
-                    this.remoteData(evnet.buffer)
+                    this.rightData(evnet.buffer)
                 }
             }
         }
     }
 
-    public onLocalClose() {
+    public onLeftClose() {
         let eventInfo = new EventInfo();
-        eventInfo.type = EventInfoType.Local
+        eventInfo.type = EventInfoType.Left
         eventInfo.name = 'close'
         this.enQueue(eventInfo);
     }
 
-    public onLocalData(buffer: Buffer) {
+    public onLeftData(buffer: Buffer) {
         let eventInfo = new EventInfo();
-        eventInfo.type = EventInfoType.Local
+        eventInfo.type = EventInfoType.Left
         eventInfo.name = 'data'
         eventInfo.buffer = buffer
         this.enQueue(eventInfo);
     }
 
-    private remoteData(buffer: Buffer) {
-        this.emit('remoteData', buffer, this.id)
-        // @TODO 通过隧道发送数据
+    private rightData(buffer: Buffer) {
+        this.emit('rightData', buffer, this.id)// @TODO 通过隧道发送数据
     }
 
-    private localData(buffer: Buffer) {
-        if (this.rometeSession != null) {
-            this.rometeSession.writeBuffer(buffer)
+    private leftData(buffer: Buffer) {
+        if (this.right != null) {
+            this.right.writeBuffer(buffer)
         }
     }
 
     private closeConnection() {
         this.eventQueue.Clear()
-        let rometeSession = this.rometeSession
-        if (rometeSession) {
-            this.rometeSession = null;
-            rometeSession.close()
+        let right = this.right
+        if (right) {
+            this.right = null;
+            right.close()
         }
-        this.emit('close', this.id)
-        // @TODO 通过隧道发送连接关闭事件
+        this.emit('close', this.id)// @TODO 通过隧道发送连接关闭事件
     }
 }

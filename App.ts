@@ -23,7 +23,7 @@ export class App extends Emitter {
         this.context = Object.create(context);
     }
 
-    use(fn) {
+    use(fn: (ctx: Context, next: any) => any) {
         this.middleware.push(fn);
         return this;
     }
@@ -52,7 +52,7 @@ export class App extends Emitter {
 
 export class TCPEventRouter {
     private map = new Map()
-    use(event: string, fn) {
+    use(event: string, fn: (ctx: Context, next: any) => any) {
         this.map[event] = fn
     }
     callback() {
@@ -70,7 +70,7 @@ export class TCPEventRouter {
 
 export class TCPPacketRouter {
     private map = new Map()
-    use(cmd: number, fn) {
+    use(cmd: number, fn: (ctx: Context, next: any) => any) {
         this.map[cmd] = fn
     }
     callback() {

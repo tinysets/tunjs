@@ -53,7 +53,7 @@ export class TCPServer extends Emitter {
                 tcpSession.name = "Session(ServerSide)"
                 tcpSession.setApp(this.app)
                 tcpSession.startServer()
-                // @TODO 记录该session
+                this.emit('connection', tcpSession)
             });
             server.listen(port);
         });
@@ -82,7 +82,7 @@ export class TCPSession extends Emitter {
         super();
         this.options = options;
         this.socket = socket;
-        this.emitCloseEvent = once(() => { this.emitCloseEvent() })
+        this.emitCloseEventOnce = once(() => { this.emitCloseEventOnce() })
     }
 
     setApp(app: App) {
@@ -185,6 +185,7 @@ export class TCPSession extends Emitter {
             this.bufferHandler.put(buffer);
             let tcpPacket = this.bufferHandler.tryGetMsgPacket()
             if (tcpPacket) {
+                this.emit('packet', tcpPacket, this)
                 if (this.eventEmiter) {
                     this.ctx.tcpEvent = "packet"
                     this.ctx.tcpPacket = tcpPacket
@@ -192,6 +193,7 @@ export class TCPSession extends Emitter {
                 }
             }
         } else {
+            this.emit('data', buffer, this)
             if (this.eventEmiter) {
                 this.ctx.tcpEvent = "data"
                 this.ctx.tcpBuffer = buffer
@@ -202,28 +204,151 @@ export class TCPSession extends Emitter {
 
     private onClose() {
         this.socket.destroy();
-        this.emitCloseEvent();
+        this.emitCloseEventOnce();
     }
     private onEnd() {
         this.socket.destroy();
-        this.emitCloseEvent();
+        this.emitCloseEventOnce();
 
     }
     private onError(error: Error) {
         console.log(error);
         this.socket.destroy();
-        this.emitCloseEvent();
+        this.emitCloseEventOnce();
     }
     private onTimeout() {
         this.socket.destroy();
-        this.emitCloseEvent();
+        this.emitCloseEventOnce();
     }
 
-    private emitCloseEvent() {
+    private emitCloseEventOnce() {
+        this.emit('close', this)
         if (this.eventEmiter) {
             this.ctx.tcpEvent = "close"
             this.eventEmiter(this.ctx)
         }
     }
+}
 
+export class LocalPortForward extends Emitter {
+
+    fromPort: number
+    toPort: number
+    tcpServer: TCPServer
+
+    constructor(fromPort: number, toPort: number) {
+        super();
+        this.fromPort = fromPort
+        this.toPort = toPort
+    }
+
+    async start() {
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let tcpServer = this.tcpServer = new TCPServer(options);
+        let succ = await tcpServer.start(this.fromPort)
+        if (!succ) {
+            console.error('本地代理启动失败!');
+        } else {
+            tcpServer.on('connection', (rometeSession: TCPSession) => {
+                this.onNewRemoteSession(rometeSession)
+            })
+        }
+        return succ
+    }
+
+    private onNewRemoteSession(rometeSession: TCPSession,) {
+        let virtualConnection = new VirtualConnection(rometeSession, this.toPort);
+        virtualConnection.start();
+    }
+}
+
+export class VirtualConnection extends Emitter {
+    rometeSession: TCPSession
+    localPort: number
+    localSession: TCPSession
+    constructor(rometeSession: TCPSession, localPort: number) {
+        super();
+        this.rometeSession = rometeSession;
+        this.localPort = localPort;
+    }
+
+    async start() {
+        this.rometeSession.on('data', (buffer) => {
+            this.remoteData(buffer)
+        })
+        this.rometeSession.on('close', () => {
+            this.remoteClose()
+        })
+
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let localSession = new TCPSession(options, new net.Socket());
+        let succ = await localSession.startClient(this.localPort, '127.0.0.1')
+        if (!succ) {
+            console.error('本地虚拟连接启动失败!');
+            this.closeConnection()
+        } else {
+            this.localSession = localSession
+            localSession.on('data', (buffer) => {
+                this.localData(buffer)
+            })
+            localSession.on('close', () => {
+                this.localClose()
+            })
+            this.localConnected()
+        }
+        return succ;
+    }
+
+    private localConnected() {
+        for (const remoteBuffer of this.remoteBuffers) {
+            this.localSession.writeBuffer(remoteBuffer)
+        }
+        this.remoteBuffers = []
+
+        if (!this.rometeSession) {
+            this.closeConnection()
+        }
+    }
+
+    private remoteClose() {
+        this.closeConnection();
+    }
+
+    private remoteBuffers: Buffer[] = []
+    private remoteData(buffer: Buffer) {
+        if (!this.localSession) {
+            this.remoteBuffers.push(buffer)
+        } else {
+            this.localSession.writeBuffer(buffer)
+        }
+    }
+
+    private localData(buffer: Buffer) {
+        if (this.rometeSession) {
+            this.rometeSession.writeBuffer(buffer)
+        }
+    }
+
+    private localClose() {
+        this.closeConnection();
+    }
+
+    private closeConnection() {
+        let rometeSession = this.rometeSession
+        let localSession = this.localSession
+        if (rometeSession) {
+            this.rometeSession = null;
+            rometeSession.close()
+        }
+        if (localSession) {
+            this.localSession = null;
+            localSession.close()
+        }
+    }
 }

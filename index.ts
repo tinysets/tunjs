@@ -1,6 +1,6 @@
 import Emitter from 'events'
 import net from 'net'
-import { LocalPortForward, PortMapCSide, PortMapTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
+import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { App, TCPEventRouter } from './App';
 
 // import Koa from 'koa'
@@ -393,7 +393,7 @@ let testLocalProxy = async () => {
     }
 
     {
-        let remotePortForward = new PortMapCSide(11111);
+        let remotePortForward = new PortMappingCSide(11111);
         let remoteForwardId = 1;
         await remotePortForward.startNew(remoteForwardId)
         remotePortForward.receiveRightData(Buffer.from('hello remotePortForward'), remoteForwardId)
@@ -404,8 +404,8 @@ let testLocalProxy = async () => {
     }
 
     {
-        let portMapTest = new PortMapTest(11111, 33333)
-        await portMapTest.start()
+        let portMappingTest = new PortMappingTest(11111, 33333)
+        await portMappingTest.start()
 
         let localOptions = new TCPSessionOptions();
         localOptions.isServer = false;
@@ -414,10 +414,10 @@ let testLocalProxy = async () => {
         let localSession = new TCPSession(localOptions, new net.Socket());
         await localSession.startClient(33333, '127.0.0.1')
 
-        localSession.writeBuffer('hello portMapTest')
+        localSession.writeBuffer('hello portMappingTest')
         setTimeout(() => {
-            portMapTest.close()
-            localSession.writeBuffer('hello portMapTest')
+            portMappingTest.close()
+            localSession.writeBuffer('hello portMappingTest') // nothing happen
         }, 1000)
     }
 }

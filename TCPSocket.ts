@@ -409,9 +409,9 @@ export class LocalVConnection extends Emitter {
 
 
 // PortMappingClientSide
-export class PortMapCSide extends Emitter {
+export class PortMappingCSide extends Emitter {
     leftPort: number
-    map: Map<number, PortMapVConnectionCSide> = new Map()
+    map: Map<number, PortMappingVConnectionCSide> = new Map()
 
     constructor(leftPort: number) {
         super();
@@ -424,7 +424,7 @@ export class PortMapCSide extends Emitter {
         options.isClient = true;
         options.isTCPPacket = false;
         let leftSession = new TCPSession(options, new net.Socket());
-        let vConnection = new PortMapVConnectionCSide(id, leftSession);
+        let vConnection = new PortMappingVConnectionCSide(id, leftSession);
         vConnection.on('close', this.connectionClose.bind(this))
         vConnection.on('leftData', this.receiveLeftData.bind(this))
 
@@ -458,7 +458,7 @@ export class PortMapCSide extends Emitter {
     }
 
     public close() {
-        let vConnections: PortMapVConnectionCSide[] = [];
+        let vConnections: PortMappingVConnectionCSide[] = [];
         for (const item of this.map.values()) {
             vConnections.push(item)
         }
@@ -468,7 +468,7 @@ export class PortMapCSide extends Emitter {
     }
 }
 // PortMappingVirtualConnectionClientSide
-export class PortMapVConnectionCSide extends Emitter {
+export class PortMappingVConnectionCSide extends Emitter {
     private id: number
     private isLeftConnected = false
     private left: TCPSession
@@ -579,8 +579,8 @@ export class PortMapVConnectionCSide extends Emitter {
 
 
 // PortMappingServerSide
-export class PortMapSSide extends Emitter {
-    map: Map<number, PortMapVConnectionSSide> = new Map()
+export class PortMappingSSide extends Emitter {
+    map: Map<number, PortMappingVConnectionSSide> = new Map()
     rightPort: number
     tcpServer: TCPServer
 
@@ -607,8 +607,8 @@ export class PortMapSSide extends Emitter {
     }
     public static UID = 1;
     private onNewRemoteSession(rometeSession: TCPSession) {
-        let id = PortMapSSide.UID++
-        let vConnection = new PortMapVConnectionSSide(id, rometeSession);
+        let id = PortMappingSSide.UID++
+        let vConnection = new PortMappingVConnectionSSide(id, rometeSession);
         vConnection.on('close', this.connectionClose.bind(this))
         vConnection.on('rightData', this.receiveRightData.bind(this))
         this.map.set(id, vConnection)
@@ -637,7 +637,7 @@ export class PortMapSSide extends Emitter {
     }
 
     public close() {
-        let vConnections: PortMapVConnectionSSide[] = [];
+        let vConnections: PortMappingVConnectionSSide[] = [];
         for (const item of this.map.values()) {
             vConnections.push(item)
         }
@@ -647,7 +647,8 @@ export class PortMapSSide extends Emitter {
         this.tcpServer.close()
     }
 }
-export class PortMapVConnectionSSide extends Emitter {
+// PortMappingVirtualConnectionServerSide
+export class PortMappingVConnectionSSide extends Emitter {
     private id: number
     private right: TCPSession
     constructor(id: number, right: TCPSession) {
@@ -743,10 +744,10 @@ export class PortMapVConnectionSSide extends Emitter {
 }
 
 
-export class PortMapTest {
+export class PortMappingTest {
 
-    private portMapCSide: PortMapCSide
-    private portMapSSide: PortMapSSide
+    private portMapCSide: PortMappingCSide
+    private portMapSSide: PortMappingSSide
     private leftPort: number
     private rightPort: number
     constructor(leftPort: number, rightPort: number) {
@@ -755,8 +756,8 @@ export class PortMapTest {
     }
 
     async start() {
-        this.portMapCSide = new PortMapCSide(this.leftPort)
-        this.portMapSSide = new PortMapSSide(this.rightPort)
+        this.portMapCSide = new PortMappingCSide(this.leftPort)
+        this.portMapSSide = new PortMappingSSide(this.rightPort)
 
         this.portMapSSide.on('newConnection', (id: number) => {
             this.portMapCSide.startNew(id);

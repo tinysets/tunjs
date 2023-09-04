@@ -82,7 +82,8 @@ export class TCPSession extends Emitter {
         super();
         this.options = options;
         this.socket = socket;
-        this.emitCloseEventOnce = once(() => { this.emitCloseEventOnce() })
+        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
+        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
     }
 
     setApp(app: App) {
@@ -209,7 +210,6 @@ export class TCPSession extends Emitter {
     private onEnd() {
         this.socket.destroy();
         this.emitCloseEventOnce();
-
     }
     private onError(error: Error) {
         console.log(error);

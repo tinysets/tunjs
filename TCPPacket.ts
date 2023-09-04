@@ -1,29 +1,22 @@
 
 export enum CMD {
     Hello = 1,
-    C2S_New_Forward, // 请求创建一个新的转发 ForwardInfo
-    S2C_New_Forward, // 对应 C2S_New_Forward 的回复
-    S2C_TCPForward_Connected, // 当一个TCP客户端连接到服务器的代理端口时 TCPForwardConnected
-    C2S_TCPForward_Connected, // S2C_TCPForward_Connected 客户端返回值
-    S2C_TCPForward_Data, // 当一个TCP客户端发送数据时候 TCPForwardData
-    C2S_TCPForward_Data, // 当一个TCP客户端发送数据时候 TCPForwardData
+    C2S_New_PortMapping,
+    S2C_New_PortMapping,
+
+    S2C_TCP_Connected,
+    S2C_TCP_Closed,
+    S2C_TCP_Data,
+
+    C2S_TCP_Closed,
+    C2S_TCP_Data, 
 }
 
 export interface ForwardInfo {
+    id: number
     type: 'tcp' | 'udp'
     serverPort: number
     localPort: number
-}
-
-export interface TCPForwardConnected {
-    forwardInfo: ForwardInfo
-    sessionPort: number
-}
-
-export interface TCPForwardData {
-    forwardInfo: ForwardInfo
-    sessionPort: number
-    buffer: Buffer
 }
 
 

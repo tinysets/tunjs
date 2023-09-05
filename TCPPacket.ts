@@ -100,3 +100,36 @@ export class TCPBufferHandler {
         return packet;
     }
 }
+
+export class TCPDataPacket {
+    mappingId: number
+    id: number
+    buffer: Buffer
+
+    public UnSerialize(data: Buffer) {
+        if (data.length >= 8) {
+            this.mappingId = data.readUInt32LE(0)
+            this.id = data.readUInt32LE(4)
+            let dataLength = data.length - 8
+            this.buffer = Buffer.alloc(dataLength)
+            if (dataLength > 0) {
+                data.copy(this.buffer, 0, 8)
+            }
+        }
+    }
+
+    public Serialize() {
+        let length = 8
+        if (this.buffer) {
+            length += this.buffer.length
+        }
+        let data = Buffer.alloc(length)
+        data.writeUint32LE(this.mappingId, 0)
+        data.writeUint32LE(this.id, 4)
+        if (this.buffer && this.buffer.length > 0) {
+            this.buffer.copy(data, 8, 0)
+        }
+        return data;
+    }
+
+}

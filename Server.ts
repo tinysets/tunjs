@@ -1,5 +1,5 @@
 import { App, Context, TCPEventRouter, TCPPacketRouter } from './App';
-import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
+import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
 import { PortMappingSSide, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 
 class PortMappingManager {
@@ -35,12 +35,12 @@ class PortMappingManager {
         portMapSSide.on('rightData', (buffer: Buffer, id: number) => {
             let packet = new TCPPacket()
             packet.Cmd = CMD.S2C_TCP_Data
-            let data = {
-                mappingId: mappingId,
-                id: id,
-                buffer: buffer
-            }
-            packet.SetJsonData(data)
+
+            let dataPacket = new TCPDataPacket()
+            dataPacket.mappingId = mappingId;
+            dataPacket.id = id;
+            dataPacket.buffer = buffer;
+            packet.Data = dataPacket.Serialize()
             tcpSession.write(packet)
         })
     }
@@ -125,9 +125,9 @@ export let startServer = async (port = 7666) => {
     tcpPacketRouter.use(CMD.C2S_TCP_Data, async (ctx: Context, next) => {
         let tcpSession = ctx.tcpSession;
         let packet = ctx.tcpPacket
-        let info: { mappingId: number, id: number, buffer } = packet.GetJsonData();
-        let buffer = Buffer.from(info.buffer.data)
-        mappingManager.leftData(tcpSession, info.mappingId, info.id, buffer)
+        let dataPacket = new TCPDataPacket()
+        dataPacket.UnSerialize(packet.Data)
+        mappingManager.leftData(tcpSession, dataPacket.mappingId, dataPacket.id, dataPacket.buffer)
     })
 
     let tcpEventRouter = new TCPEventRouter();

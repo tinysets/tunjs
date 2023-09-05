@@ -1,8 +1,8 @@
 import Emitter from 'events'
 import net from 'net'
 import once from 'once'
-import { TCPBufferHandler, TCPPacket } from './TCPPacket';
 import { App, Context } from './App';
+import { TCPBufferHandler, TCPPacket } from './TCPPacket';
 
 /*
 { // target port map to server port
@@ -287,14 +287,14 @@ class EventQueue {
 
 export class LocalPortForward extends Emitter {
 
-    rightPort: number
     leftPort: number
+    rightPort: number
     tcpServer: TCPServer
 
-    constructor(rightPort: number, leftPort: number) {
+    constructor(leftPort: number, rightPort: number) {
         super();
-        this.rightPort = rightPort
         this.leftPort = leftPort
+        this.rightPort = rightPort
     }
 
     async start() {

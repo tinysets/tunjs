@@ -78,7 +78,7 @@ class PortMappingManager {
     }
 }
 
-export let startClient = async () => {
+export let startClient = async (forwardInfos: ForwardInfo[]) => {
 
     let mappingManager = new PortMappingManager()
     let tcpClientApp = new App();
@@ -96,15 +96,11 @@ export let startClient = async () => {
         let tcpSession = ctx.tcpSession;
         let packet = new TCPPacket()
         packet.Cmd = CMD.C2S_New_PortMapping
-        let forwardInfos: ForwardInfo[] = [
-            { id: 1, type: 'tcp', localPort: 22000, serverPort: 22333 },
-            { id: 2, type: 'tcp', localPort: 33000, serverPort: 33222 },
-        ];
         packet.SetJsonData(forwardInfos)
         tcpSession.write(packet);
 
         for (const forwardInfo of forwardInfos) {
-            let portMapCSide = new PortMappingCSide(forwardInfo.localPort)
+            let portMapCSide = new PortMappingCSide(forwardInfo.targetPort, forwardInfo.targetAddr)
             mappingManager.newPortMapping(tcpSession, forwardInfo.id, portMapCSide)
         }
     })

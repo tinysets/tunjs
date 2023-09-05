@@ -9,14 +9,15 @@ export enum CMD {
     S2C_TCP_Data,
 
     C2S_TCP_Closed,
-    C2S_TCP_Data, 
+    C2S_TCP_Data,
 }
 
 export interface ForwardInfo {
     id: number
     type: 'tcp' | 'udp'
+    targetAddr: string
+    targetPort: number
     serverPort: number
-    localPort: number
 }
 
 

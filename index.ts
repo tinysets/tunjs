@@ -4,6 +4,7 @@ import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSess
 import { App, TCPEventRouter } from './App';
 import { startServer } from './Server';
 import { startClient } from './Client';
+import { ForwardInfo } from './TCPPacket';
 
 // import Koa from 'koa'
 // let koaApp = new Koa();
@@ -472,8 +473,12 @@ let testLocalProxy = async () => {
 // testLocalProxy();
 
 let testPortMapping = async () => {
+    let forwardInfos: ForwardInfo[] = [
+        { id: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 22000, serverPort: 22333 },
+        { id: 2, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 33000, serverPort: 33222 },
+    ];
     await startServer()
-    await startClient()
+    await startClient(forwardInfos)
 
     setTimeout(async () => {
         let server1 = await TestServer.StartServer(22000)

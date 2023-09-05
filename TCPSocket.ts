@@ -425,11 +425,13 @@ export class LocalVConnection extends Emitter {
 // PortMappingClientSide
 export class PortMappingCSide extends Emitter {
     leftPort: number
+    leftAddr: string
     map: Map<number, PortMappingVConnectionCSide> = new Map()
 
-    constructor(leftPort: number) {
+    constructor(leftPort: number, leftAddr = '127.0.0.1') {
         super();
         this.leftPort = leftPort
+        this.leftAddr = leftAddr
     }
 
     async startNew(id: number) {
@@ -443,7 +445,7 @@ export class PortMappingCSide extends Emitter {
         vConnection.on('leftData', this.receiveLeftData.bind(this))
 
         this.map.set(id, vConnection)
-        let succ = await vConnection.start(this.leftPort)
+        let succ = await vConnection.start(this.leftPort, this.leftAddr)
         if (!succ) {
             console.error(`远程代理 本地session创建失败! id=${id}`);
         }
@@ -492,7 +494,7 @@ export class PortMappingVConnectionCSide extends Emitter {
         this.left = left;
     }
 
-    async start(leftPort: number) {
+    async start(leftPort: number, leftAddr = '127.0.0.1') {
         this.left.on('data', (buffer) => {
             let eventInfo = new EventInfo();
             eventInfo.type = EventInfoType.Left
@@ -506,7 +508,7 @@ export class PortMappingVConnectionCSide extends Emitter {
             eventInfo.name = 'close'
             this.enQueue(eventInfo);
         })
-        let succ = await this.left.startClient(leftPort, '127.0.0.1')
+        let succ = await this.left.startClient(leftPort, leftAddr)
         this.isLeftConnected = succ;
         if (!succ) {
             this.closeConnection()

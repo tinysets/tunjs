@@ -141,7 +141,7 @@ export class TCPSession extends Emitter {
         });
     }
 
-    startClient(port: number, host: string) {
+    startClient(remotePort: number, remoteAddr = '127.0.0.1') {
         if (this.socket == null) {
             return;
         }
@@ -178,7 +178,7 @@ export class TCPSession extends Emitter {
             socket.on("timeout", () => {
                 this.onTimeout();
             });
-            socket.connect(port, host)
+            socket.connect(remotePort, remoteAddr)
         });
         return promise
     }
@@ -349,7 +349,7 @@ export class LocalVConnection extends Emitter {
         options.isClient = false;
         options.isTCPPacket = false;
         let left = new TCPSession(options, new net.Socket());
-        let succ = await left.startClient(this.leftPort, '127.0.0.1')
+        let succ = await left.startClient(this.leftPort)
         if (!succ) {
             console.error('本地虚拟连接启动失败!');
             this.left = left

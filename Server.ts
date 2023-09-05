@@ -76,7 +76,7 @@ class PortMappingManager {
     }
 }
 
-export let startServer = async () => {
+export let startServer = async (port = 7666) => {
 
     let mappingManager = new PortMappingManager()
     let tcpServerApp = new App();

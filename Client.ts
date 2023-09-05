@@ -78,7 +78,7 @@ class PortMappingManager {
     }
 }
 
-export let startClient = async (forwardInfos: ForwardInfo[]) => {
+export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, remoteAddr = '127.0.0.1') => {
 
     let mappingManager = new PortMappingManager()
     let tcpClientApp = new App();
@@ -162,5 +162,5 @@ export let startClient = async (forwardInfos: ForwardInfo[]) => {
     }
     let tcpSession = new TCPSession(options, new net.Socket());
     tcpSession.setApp(tcpClientApp)
-    await tcpSession.startClient(7666, '127.0.0.1');
+    await tcpSession.startClient(remotePort, remoteAddr);
 }

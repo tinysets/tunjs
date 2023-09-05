@@ -4,6 +4,7 @@ import { ForwardInfo } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
+import delay from 'delay';
 
 class Tester {
 
@@ -29,8 +30,7 @@ class Tester {
         return tcpServer
     }
 
-    static async StartClient(port: number, host?: string) {
-        host = host ? host : '127.0.0.1'
+    static async StartClient(remotePort: number, remoteAddr = '127.0.0.1') {
         let clientApp = new App()
         let clientEventRouter = new TCPEventRouter()
         clientEventRouter.use('data', async (ctx, next) => {
@@ -47,14 +47,14 @@ class Tester {
         localOptions.isTCPPacket = false;
         let localSession = new TCPSession(localOptions, new net.Socket());
         localSession.setApp(clientApp)
-        await localSession.startClient(port, host)
+        await localSession.startClient(remotePort, remoteAddr)
         return localSession
     }
 }
 
 let testLocalProxy = async () => {
 
-    {
+    { // server 11111
         let serverApp = new App()
         let serverEventRouter = new TCPEventRouter()
         serverEventRouter.use('data', async (ctx, next) => {
@@ -75,36 +75,43 @@ let testLocalProxy = async () => {
         await tcpServer.start(11111)
     }
 
-    {
+    { // localPortForward 22222 --> 11111
         let localPortForward = new LocalPortForward(11111, 22222);
         await localPortForward.start()
     }
 
-    {
+    { // client request 22222
         let localOptions = new TCPSessionOptions();
         localOptions.isServer = false;
         localOptions.isClient = true;
         localOptions.isTCPPacket = false;
         let localSession = new TCPSession(localOptions, new net.Socket());
-        await localSession.startClient(22222, '127.0.0.1')
+        await localSession.startClient(22222)
 
         localSession.writeBuffer('hello localPortForward')
+
+        localSession.on('data', (buffer: Buffer) => {
+            let msgStr = buffer.toString()
+            console.log(`LocalPortForward Client Receive : ${msgStr}`);
+        });
+
+        await delay(1000)
         localSession.close()
         localSession.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
     }
 
-    {
+    { // PortMappingCSide request 11111
         let remotePortForward = new PortMappingCSide(11111);
         let remoteForwardId = 1;
         await remotePortForward.startNew(remoteForwardId)
-        remotePortForward.receiveRightData(Buffer.from('hello remotePortForward'), remoteForwardId)
+        remotePortForward.receiveRightData(Buffer.from('hello portMappingCSide'), remoteForwardId)
         remotePortForward.on('leftData', (buffer: Buffer, id: number) => {
             let msgStr = buffer.toString()
-            console.log(`Receive : id=${id}, ${msgStr}`);
+            console.log(`PortMappingCSide Client Receive : id=${id}, ${msgStr}`);
         });
     }
 
-    {
+    { // PortMappingTest 33333 --> 11111
         let portMappingTest = new PortMappingTest(11111, 33333)
         await portMappingTest.start()
 
@@ -113,17 +120,20 @@ let testLocalProxy = async () => {
         localOptions.isClient = true;
         localOptions.isTCPPacket = false;
         let localSession = new TCPSession(localOptions, new net.Socket());
-        await localSession.startClient(33333, '127.0.0.1')
+        await localSession.startClient(33333)
+
+        localSession.on('data', (buffer: Buffer) => {
+            let msgStr = buffer.toString()
+            console.log(`PortMappingTest Client Receive : ${msgStr}`);
+        });
 
         localSession.writeBuffer('hello portMappingTest')
-        setTimeout(() => {
-            portMappingTest.close()
-            localSession.writeBuffer('hello portMappingTest') // nothing happen
-        }, 1000)
+
+        await delay(1000)
+        portMappingTest.close()
+        localSession.writeBuffer('hello portMappingTest') // nothing happen
     }
 }
-
-// testLocalProxy();
 
 let testPortMapping = async () => {
     let forwardInfos: ForwardInfo[] = [
@@ -134,28 +144,28 @@ let testPortMapping = async () => {
     await startServer()
     await startClient(forwardInfos)
 
-    setTimeout(async () => {
-        let server1 = await Tester.StartServer(22000)
-        let server2 = await Tester.StartServer(33000)
+    await delay(1000)
 
-        let client1 = await Tester.StartClient(22333)
-        let client2 = await Tester.StartClient(33222)
+    let server1 = await Tester.StartServer(22000)
+    let server2 = await Tester.StartServer(33000)
 
-        // setInterval(async () => {
-        //     client2.writeBuffer('dddddd')
-        //     client1.writeBuffer('cccccc')
-        // }, 100)
-        setTimeout(async () => {
-            client1.writeBuffer('client1 hello')
-            client2.writeBuffer('client2 hello')
-        }, 200)
+    let client1 = await Tester.StartClient(22333)
+    let client2 = await Tester.StartClient(33222)
 
-        setTimeout(async () => {
-            client1.writeBuffer('client1 hello')
-            client2.writeBuffer('client2 hello')
-        }, 300)
+    // setInterval(async () => {
+    //     client2.writeBuffer('dddddd')
+    //     client1.writeBuffer('cccccc')
+    // }, 100)
 
-    }, 1000)
+    await delay(100)
+    client1.writeBuffer('client1 hello')
+    client2.writeBuffer('client2 hello')
+
+    await delay(100)
+    client1.writeBuffer('client1 hello')
+    client2.writeBuffer('client2 hello')
 }
-testPortMapping();
+
+testLocalProxy();
+// testPortMapping();
 

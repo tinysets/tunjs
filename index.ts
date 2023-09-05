@@ -235,7 +235,7 @@ let testTCPPing = async () => {
     await startServer()
     await startClient(forwardInfos)
     await delay(500)
-    console.log('testTCPPing ready')
+    console.log('testTCPPing ready :')
 
     { // server 11111
         let packetRouter = new TCPPacketRouter();
@@ -298,7 +298,39 @@ let testTCPPing = async () => {
             return a + b
         }, 0);
         let avg = totle / rtts.length
-        console.log(`proxy avg rtt = ${avg}ms`)
+        console.log(`remote proxy avg rtt = ${avg}ms`)
+    }
+
+    { // localPortForward 33333 --> 11111
+        let localPortForward = new LocalPortForward(11111, 33333);
+        await localPortForward.start()
+    }
+
+    { // client request 33333
+        let rtts: number[] = []
+        let packetRouter = new TCPPacketRouter();
+        packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
+            let tcpPacket = ctx.tcpPacket
+            let sendTime = tcpPacket.GetJsonData().time;
+            let currTime = Date.now();
+            let rtt = currTime - sendTime;
+            rtts.push(rtt);
+        })
+        let tcpClient = await Tester.StartPacketClient(packetRouter, 33333);
+
+        await Tester.Loop(() => {
+            let packet = new TCPPacket();
+            packet.Cmd = CMD.Ping
+            packet.SetJsonData({ time: Date.now() });
+            tcpClient.write(packet)
+        }, 100, 10);
+
+        await delay(100);
+        let totle = rtts.reduce((a, b) => {
+            return a + b
+        }, 0);
+        let avg = totle / rtts.length
+        console.log(`local proxy avg rtt = ${avg}ms`)
     }
 
 }

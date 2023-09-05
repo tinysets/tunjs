@@ -109,7 +109,7 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
         let tcpSession = ctx.tcpSession;
         let packet = ctx.tcpPacket
         let succs: number[] = packet.GetJsonData();
-        console.log(`S2C_New_PortMapping succs = ${succs}`);
+        // console.log(`S2C_New_PortMapping succs = ${succs}`);
     })
 
     tcpPacketRouter.use(CMD.S2C_TCP_Connected, async (ctx: Context, next) => {

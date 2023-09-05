@@ -166,6 +166,19 @@ let testPortMapping = async () => {
     client2.writeBuffer('client2 hello')
 }
 
-testLocalProxy();
-// testPortMapping();
+let testSpeed = async () => {
+    let forwardInfos: ForwardInfo[] = [
+        { id: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 22000, serverPort: 22333 },
+    ];
+    await startServer()
+    await startClient(forwardInfos)
 
+    await delay(500)
+    console.log('testSpeed ready')
+}
+
+// testLocalProxy();
+// testPortMapping();
+testSpeed()
+// iperf3 -s -p 5555
+// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 5666

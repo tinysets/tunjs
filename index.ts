@@ -476,6 +476,7 @@ let testPortMapping = async () => {
     let forwardInfos: ForwardInfo[] = [
         { id: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 22000, serverPort: 22333 },
         { id: 2, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 33000, serverPort: 33222 },
+        { id: 3, type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, serverPort: 443 },
     ];
     await startServer()
     await startClient(forwardInfos)
@@ -487,10 +488,10 @@ let testPortMapping = async () => {
         let client1 = await TestServer.StartClient(22333)
         let client2 = await TestServer.StartClient(33222)
 
-        setInterval(async () => {
-            client2.writeBuffer('dddddd')
-            client1.writeBuffer('cccccc')
-        }, 100)
+        // setInterval(async () => {
+        //     client2.writeBuffer('dddddd')
+        //     client1.writeBuffer('cccccc')
+        // }, 100)
         setTimeout(async () => {
             client1.writeBuffer('client1 hello')
             client2.writeBuffer('client2 hello')

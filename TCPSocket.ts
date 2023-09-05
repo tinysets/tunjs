@@ -4,6 +4,19 @@ import once from 'once'
 import { TCPBufferHandler, TCPPacket } from './TCPPacket';
 import { App, Context } from './App';
 
+/*
+{ // target port map to server port
+    client --> ServerIP:ServerPort --> TargetIP:TargetPort
+          local                 tcp tunnel               server
+TargetPort<====>Stream <-------------------------> Stream<====>ServerPort
+  left         right                               left         right
+}
+{ // local port forward
+ client --> ServerPort --> LocalPort
+LocalPort<====>ServerPort
+  left           right
+}
+*/
 
 export class TCPSessionOptions {
     isTCPPacket: boolean = false;

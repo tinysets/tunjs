@@ -186,13 +186,19 @@ let testSpeed = async () => {
 // testPortMapping();
 testSpeed()
 
-// proxy speed
+// remote proxy speed
 // iperf3 -s -p 22000
 // iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22333
 // [ ID] Interval           Transfer     Bandwidth       Retr
 // [  4]   0.00-5.00   sec  1.72 GBytes  2.96 Gbits/sec    3             sender
 // [  4]   0.00-5.00   sec  1.71 GBytes  2.94 Gbits/sec                  receiver
 
+// remote proxy speed
+// iperf3 -s -p 22000
+// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22222
+// [ ID] Interval           Transfer     Bandwidth       Retr
+// [  4]   0.00-5.00   sec  8.04 GBytes  13.8 Gbits/sec    2             sender
+// [  4]   0.00-5.00   sec  8.02 GBytes  13.8 Gbits/sec                  receiver
 
 // native speed
 // iperf3 -s -p 22000

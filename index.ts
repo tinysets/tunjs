@@ -96,6 +96,10 @@ class Tester {
         return tcpServer
     }
 
+    static Nanoseconds() {
+        return process.hrtime.bigint(); // nodejs v10 above
+    }
+
 }
 
 let testLocalProxy = async () => {
@@ -253,16 +257,17 @@ let testTCPPing = async () => {
         packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
             let tcpPacket = ctx.tcpPacket
             let sendTime = tcpPacket.GetJsonData().time;
-            let currTime = Date.now();
+            sendTime = BigInt(sendTime)
+            let currTime = Tester.Nanoseconds();
             let rtt = currTime - sendTime;
-            rtts.push(rtt);
+            rtts.push(Number(rtt));
         })
         let tcpClient = await Tester.StartPacketClient(packetRouter, 11111);
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
             packet.Cmd = CMD.Ping
-            packet.SetJsonData({ time: Date.now() });
+            packet.SetJsonData({ time: Tester.Nanoseconds().toString() });
             tcpClient.write(packet)
         }, 100, 10);
 
@@ -270,8 +275,8 @@ let testTCPPing = async () => {
         let totle = rtts.reduce((a, b) => {
             return a + b
         }, 0);
-        let avg = totle / rtts.length
-        console.log(`native avg rtt = ${avg}ms`)
+        let avg = totle / rtts.length / 1000 / 1000
+        console.log(`native avg rtt = ${avg.toFixed(2)}ms`)
     }
 
     { // client request 22222
@@ -280,16 +285,17 @@ let testTCPPing = async () => {
         packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
             let tcpPacket = ctx.tcpPacket
             let sendTime = tcpPacket.GetJsonData().time;
-            let currTime = Date.now();
+            sendTime = BigInt(sendTime)
+            let currTime = Tester.Nanoseconds();
             let rtt = currTime - sendTime;
-            rtts.push(rtt);
+            rtts.push(Number(rtt));
         })
         let tcpClient = await Tester.StartPacketClient(packetRouter, 22222);
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
             packet.Cmd = CMD.Ping
-            packet.SetJsonData({ time: Date.now() });
+            packet.SetJsonData({ time: Tester.Nanoseconds().toString() });
             tcpClient.write(packet)
         }, 100, 10);
 
@@ -297,8 +303,8 @@ let testTCPPing = async () => {
         let totle = rtts.reduce((a, b) => {
             return a + b
         }, 0);
-        let avg = totle / rtts.length
-        console.log(`remote proxy avg rtt = ${avg}ms`)
+        let avg = totle / rtts.length / 1000 / 1000
+        console.log(`remote proxy avg rtt = ${avg.toFixed(2)}ms`)
     }
 
     { // localPortForward 33333 --> 11111
@@ -312,16 +318,17 @@ let testTCPPing = async () => {
         packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
             let tcpPacket = ctx.tcpPacket
             let sendTime = tcpPacket.GetJsonData().time;
-            let currTime = Date.now();
+            sendTime = BigInt(sendTime)
+            let currTime = Tester.Nanoseconds();
             let rtt = currTime - sendTime;
-            rtts.push(rtt);
+            rtts.push(Number(rtt));
         })
         let tcpClient = await Tester.StartPacketClient(packetRouter, 33333);
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
             packet.Cmd = CMD.Ping
-            packet.SetJsonData({ time: Date.now() });
+            packet.SetJsonData({ time: Tester.Nanoseconds().toString() });
             tcpClient.write(packet)
         }, 100, 10);
 
@@ -329,10 +336,13 @@ let testTCPPing = async () => {
         let totle = rtts.reduce((a, b) => {
             return a + b
         }, 0);
-        let avg = totle / rtts.length
-        console.log(`local proxy avg rtt = ${avg}ms`)
+        let avg = totle / rtts.length / 1000 / 1000
+        console.log(`local proxy avg rtt = ${avg.toFixed(2)}ms`)
     }
-
+    // result
+    // native avg rtt = 0.59ms
+    // remote proxy avg rtt = 1.42ms
+    // local proxy avg rtt = 0.81ms
 }
 
 // testLocalProxy();

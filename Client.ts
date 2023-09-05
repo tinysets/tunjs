@@ -117,7 +117,6 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
         let packet = ctx.tcpPacket
         let info: { mappingId: number, id: number } = packet.GetJsonData();
         mappingManager.newConnection(tcpSession, info.mappingId, info.id)
-        console.log('client connect:' + JSON.stringify(info))
     })
 
     tcpPacketRouter.use(CMD.S2C_TCP_Closed, async (ctx: Context, next) => {

@@ -1,6 +1,6 @@
 import net from 'net'
-import { App, TCPEventRouter } from './App';
-import { ForwardInfo } from './TCPPacket';
+import { App, Context, TCPEventRouter, TCPPacketRouter } from './App';
+import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
@@ -9,69 +9,115 @@ import delay from 'delay';
 class Tester {
 
     static async StartServer(port: number) {
-        let serverApp = new App()
-        let serverEventRouter = new TCPEventRouter()
-        serverEventRouter.use('data', async (ctx, next) => {
+        let app = new App()
+        let eventRouter = new TCPEventRouter()
+        eventRouter.use('data', async (ctx, next) => {
             let tcpSession = ctx.tcpSession
             let tcpBuffer = ctx.tcpBuffer
             let msgStr = tcpBuffer.toString()
             console.log(`Server Receive : ${msgStr}`);
             tcpSession.writeBuffer(`[server replay] : ${msgStr}`);
         })
-        serverApp.use(serverEventRouter.callback())
+        app.use(eventRouter.callback())
 
-        let serverOptions = new TCPSessionOptions();
-        serverOptions.isServer = true;
-        serverOptions.isClient = false;
-        serverOptions.isTCPPacket = false;
-        let tcpServer = new TCPServer(serverOptions);
-        tcpServer.setApp(serverApp);
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let tcpServer = new TCPServer(options);
+        tcpServer.setApp(app);
         await tcpServer.start(port)
         return tcpServer
     }
 
     static async StartClient(remotePort: number, remoteAddr = '127.0.0.1') {
-        let clientApp = new App()
-        let clientEventRouter = new TCPEventRouter()
-        clientEventRouter.use('data', async (ctx, next) => {
+        let app = new App()
+        let eventRouter = new TCPEventRouter()
+        eventRouter.use('data', async (ctx, next) => {
             let tcpSession = ctx.tcpSession
             let tcpBuffer = ctx.tcpBuffer
             let msgStr = tcpBuffer.toString()
             console.log(`Client Receive : ${msgStr}`);
         })
-        clientApp.use(clientEventRouter.callback())
+        app.use(eventRouter.callback())
 
-        let localOptions = new TCPSessionOptions();
-        localOptions.isServer = false;
-        localOptions.isClient = true;
-        localOptions.isTCPPacket = false;
-        let localSession = new TCPSession(localOptions, new net.Socket());
-        localSession.setApp(clientApp)
-        await localSession.startClient(remotePort, remoteAddr)
-        return localSession
+        let options = new TCPSessionOptions();
+        options.isServer = false;
+        options.isClient = true;
+        options.isTCPPacket = false;
+        let tcpClient = new TCPSession(options, new net.Socket());
+        tcpClient.setApp(app)
+        await tcpClient.startClient(remotePort, remoteAddr)
+        return tcpClient
     }
+
+    static async Loop(fn: () => void, times: number, interval: number) {
+        let p = new Promise<void>((resolve, reject) => {
+            let count = 0
+            let timer = setInterval(() => {
+                fn();
+                count++
+                if (count >= times) {
+                    clearInterval(timer);
+                    resolve();
+                }
+            }, interval)
+        })
+        return p;
+    }
+
+    static async StartPacketClient(packetRouter: TCPPacketRouter, remotePort: number, remoteAddr = '127.0.0.1') {
+        let app = new App()
+        let eventRouter = new TCPEventRouter()
+        eventRouter.use('packet', packetRouter.callback())
+        app.use(eventRouter.callback())
+        let options = new TCPSessionOptions();
+        options.isServer = false;
+        options.isClient = true;
+        options.isTCPPacket = true;
+        let tcpClient = new TCPSession(options, new net.Socket());
+        tcpClient.setApp(app)
+        await tcpClient.startClient(remotePort, remoteAddr)
+        return tcpClient
+    }
+
+    static async StartPacketServer(packetRouter: TCPPacketRouter, port: number) {
+        let app = new App()
+        let eventRouter = new TCPEventRouter()
+        eventRouter.use('packet', packetRouter.callback())
+        app.use(eventRouter.callback())
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = true;
+        let tcpServer = new TCPServer(options);
+        tcpServer.setApp(app);
+        await tcpServer.start(port)
+        return tcpServer
+    }
+
 }
 
 let testLocalProxy = async () => {
 
     { // server 11111
-        let serverApp = new App()
-        let serverEventRouter = new TCPEventRouter()
-        serverEventRouter.use('data', async (ctx, next) => {
+        let app = new App()
+        let eventRouter = new TCPEventRouter()
+        eventRouter.use('data', async (ctx, next) => {
             let tcpSession = ctx.tcpSession
             let tcpBuffer = ctx.tcpBuffer
             let msgStr = tcpBuffer.toString()
             console.log(`Server Receive : ${msgStr}`);
             tcpSession.writeBuffer(`server replay : ${msgStr}`);
         })
-        serverApp.use(serverEventRouter.callback())
+        app.use(eventRouter.callback())
 
-        let serverOptions = new TCPSessionOptions();
-        serverOptions.isServer = true;
-        serverOptions.isClient = false;
-        serverOptions.isTCPPacket = false;
-        let tcpServer = new TCPServer(serverOptions);
-        tcpServer.setApp(serverApp);
+        let options = new TCPSessionOptions();
+        options.isServer = true;
+        options.isClient = false;
+        options.isTCPPacket = false;
+        let tcpServer = new TCPServer(options);
+        tcpServer.setApp(app);
         await tcpServer.start(11111)
     }
 
@@ -81,23 +127,23 @@ let testLocalProxy = async () => {
     }
 
     { // client request 22222
-        let localOptions = new TCPSessionOptions();
-        localOptions.isServer = false;
-        localOptions.isClient = true;
-        localOptions.isTCPPacket = false;
-        let localSession = new TCPSession(localOptions, new net.Socket());
-        await localSession.startClient(22222)
+        let options = new TCPSessionOptions();
+        options.isServer = false;
+        options.isClient = true;
+        options.isTCPPacket = false;
+        let tcpClient = new TCPSession(options, new net.Socket());
+        await tcpClient.startClient(22222)
 
-        localSession.writeBuffer('hello localPortForward')
+        tcpClient.writeBuffer('hello localPortForward')
 
-        localSession.on('data', (buffer: Buffer) => {
+        tcpClient.on('data', (buffer: Buffer) => {
             let msgStr = buffer.toString()
             console.log(`LocalPortForward Client Receive : ${msgStr}`);
         });
 
         await delay(1000)
-        localSession.close()
-        localSession.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
+        tcpClient.close()
+        tcpClient.writeBuffer('close') // will throw error 'ERR_STREAM_WRITE_AFTER_END'
     }
 
     { // PortMappingCSide request 11111
@@ -115,23 +161,23 @@ let testLocalProxy = async () => {
         let portMappingTest = new PortMappingTest(11111, 33333)
         await portMappingTest.start()
 
-        let localOptions = new TCPSessionOptions();
-        localOptions.isServer = false;
-        localOptions.isClient = true;
-        localOptions.isTCPPacket = false;
-        let localSession = new TCPSession(localOptions, new net.Socket());
-        await localSession.startClient(33333)
+        let options = new TCPSessionOptions();
+        options.isServer = false;
+        options.isClient = true;
+        options.isTCPPacket = false;
+        let tcpClient = new TCPSession(options, new net.Socket());
+        await tcpClient.startClient(33333)
 
-        localSession.on('data', (buffer: Buffer) => {
+        tcpClient.on('data', (buffer: Buffer) => {
             let msgStr = buffer.toString()
             console.log(`PortMappingTest Client Receive : ${msgStr}`);
         });
 
-        localSession.writeBuffer('hello portMappingTest')
+        tcpClient.writeBuffer('hello portMappingTest')
 
         await delay(1000)
         portMappingTest.close()
-        localSession.writeBuffer('hello portMappingTest') // nothing happen
+        tcpClient.writeBuffer('hello portMappingTest') // nothing happen
     }
 }
 
@@ -182,9 +228,85 @@ let testSpeed = async () => {
     console.log('testSpeed ready')
 }
 
+let testTCPPing = async () => {
+    let forwardInfos: ForwardInfo[] = [
+        { id: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 11111, serverPort: 22222 },
+    ];
+    await startServer()
+    await startClient(forwardInfos)
+    await delay(500)
+    console.log('testTCPPing ready')
+
+    { // server 11111
+        let packetRouter = new TCPPacketRouter();
+        packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
+            let tcpSession = ctx.tcpSession
+            let tcpPacket = ctx.tcpPacket
+            tcpSession.write(tcpPacket);
+        })
+        await Tester.StartPacketServer(packetRouter, 11111);
+    }
+
+    { // client request 11111
+        let rtts: number[] = []
+        let packetRouter = new TCPPacketRouter();
+        packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
+            let tcpPacket = ctx.tcpPacket
+            let sendTime = tcpPacket.GetJsonData().time;
+            let currTime = Date.now();
+            let rtt = currTime - sendTime;
+            rtts.push(rtt);
+        })
+        let tcpClient = await Tester.StartPacketClient(packetRouter, 11111);
+
+        await Tester.Loop(() => {
+            let packet = new TCPPacket();
+            packet.Cmd = CMD.Ping
+            packet.SetJsonData({ time: Date.now() });
+            tcpClient.write(packet)
+        }, 100, 10);
+
+        await delay(100);
+        let totle = rtts.reduce((a, b) => {
+            return a + b
+        }, 0);
+        let avg = totle / rtts.length
+        console.log(`native avg rtt = ${avg}ms`)
+    }
+
+    { // client request 22222
+        let rtts: number[] = []
+        let packetRouter = new TCPPacketRouter();
+        packetRouter.use(CMD.Ping, async (ctx: Context, next) => {
+            let tcpPacket = ctx.tcpPacket
+            let sendTime = tcpPacket.GetJsonData().time;
+            let currTime = Date.now();
+            let rtt = currTime - sendTime;
+            rtts.push(rtt);
+        })
+        let tcpClient = await Tester.StartPacketClient(packetRouter, 22222);
+
+        await Tester.Loop(() => {
+            let packet = new TCPPacket();
+            packet.Cmd = CMD.Ping
+            packet.SetJsonData({ time: Date.now() });
+            tcpClient.write(packet)
+        }, 100, 10);
+
+        await delay(100);
+        let totle = rtts.reduce((a, b) => {
+            return a + b
+        }, 0);
+        let avg = totle / rtts.length
+        console.log(`proxy avg rtt = ${avg}ms`)
+    }
+
+}
+
 // testLocalProxy();
 // testPortMapping();
-testSpeed()
+// testSpeed()
+testTCPPing()
 
 // remote proxy speed
 // iperf3 -s -p 22000

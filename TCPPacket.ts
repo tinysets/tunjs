@@ -1,6 +1,7 @@
 
 export enum CMD {
     Hello = 1,
+    Ping,
     C2S_New_PortMapping,
     S2C_New_PortMapping,
 

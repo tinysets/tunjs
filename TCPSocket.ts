@@ -157,8 +157,8 @@ export class TCPSession extends Emitter {
             socket.on("connect", () => {
             });
             socket.on("ready", () => {
-                resolve(true)
                 this.onReady();
+                resolve(true)
             });
             socket.on("data", (data) => {
                 this.onData(data);
@@ -634,9 +634,8 @@ export class PortMappingSSide extends Emitter {
         }
         return succ
     }
-    public static UID = 1;
     private onNewRemoteSession(rometeSession: TCPSession) {
-        let id = PortMappingSSide.UID++
+        let id = UID.GetUID()
         let vConnection = new PortMappingVConnectionSSide(id, rometeSession);
         vConnection.on('close', this.connectionClose.bind(this))
         vConnection.on('rightData', this.receiveRightData.bind(this))
@@ -814,5 +813,12 @@ export class PortMappingTest {
         if (this.portMapSSide) {
             this.portMapCSide.close();
         }
+    }
+}
+
+export class UID {
+    private static uid = 1
+    public static GetUID() {
+        return UID.uid++
     }
 }

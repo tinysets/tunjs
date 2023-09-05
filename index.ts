@@ -173,6 +173,11 @@ let testSpeed = async () => {
     await startServer()
     await startClient(forwardInfos)
 
+    { // localPortForward 22222 --> 22000
+        let localPortForward = new LocalPortForward(22000, 22222);
+        await localPortForward.start()
+    }
+
     await delay(500)
     console.log('testSpeed ready')
 }
@@ -180,5 +185,18 @@ let testSpeed = async () => {
 // testLocalProxy();
 // testPortMapping();
 testSpeed()
-// iperf3 -s -p 5555
-// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 5666
+
+// proxy speed
+// iperf3 -s -p 22000
+// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22333
+// [ ID] Interval           Transfer     Bandwidth       Retr
+// [  4]   0.00-5.00   sec  1.72 GBytes  2.96 Gbits/sec    3             sender
+// [  4]   0.00-5.00   sec  1.71 GBytes  2.94 Gbits/sec                  receiver
+
+
+// native speed
+// iperf3 -s -p 22000
+// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22000
+// [ ID] Interval           Transfer     Bandwidth       Retr
+// [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec    9             sender
+// [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec                  receiver

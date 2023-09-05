@@ -193,7 +193,7 @@ testSpeed()
 // [  4]   0.00-5.00   sec  1.72 GBytes  2.96 Gbits/sec    3             sender
 // [  4]   0.00-5.00   sec  1.71 GBytes  2.94 Gbits/sec                  receiver
 
-// remote proxy speed
+// local proxy speed
 // iperf3 -s -p 22000
 // iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22222
 // [ ID] Interval           Transfer     Bandwidth       Retr

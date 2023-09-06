@@ -5,21 +5,19 @@ import { Pipe } from './UDPSocket';
 // PortMappingClientSide
 export class PortMappingCSide {
     tcpClient: TCPClient
-    leftPort: number
-    leftAddr: string
+    forwardInfo: ForwardInfo
     map: Map<number, Pipe> = new Map()
 
-    constructor(tcpClient: TCPClient, leftPort: number, leftAddr = '127.0.0.1') {
+    constructor(tcpClient: TCPClient, forwardInfo: ForwardInfo) {
         this.tcpClient = tcpClient;
-        this.leftPort = leftPort
-        this.leftAddr = leftAddr
+        this.forwardInfo = forwardInfo
     }
 
     async startNew(mappingId: number, pipeId: number) {
         let options = new TCPOptions();
         options.usePacket = false;
         let leftSession = new TCPClient(options);
-        leftSession.setClient(this.leftPort, this.leftAddr)
+        leftSession.setClient(this.forwardInfo.targetPort, this.forwardInfo.targetAddr)
 
         let tcpTunnle = new TCPTunnleEndPoint(this.tcpClient, mappingId, pipeId)
         let pipe = new Pipe(leftSession, tcpTunnle);
@@ -142,7 +140,7 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
                 packet.SetJsonData(forwardInfos)
                 tcpClient.writePacket(packet);
                 for (const forwardInfo of forwardInfos) {
-                    let portMapCSide = new PortMappingCSide(tcpClient, forwardInfo.targetPort, forwardInfo.targetAddr)
+                    let portMapCSide = new PortMappingCSide(tcpClient, forwardInfo)
                     mappingManager.newPortMapping(tcpClient, forwardInfo.mappingId, portMapCSide)
                 }
             } else if (packet.Cmd == CMD.New_PortMapping) {

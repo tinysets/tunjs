@@ -1,8 +1,7 @@
 import Emitter from 'events'
 import net from 'net'
 import once from 'once'
-import { App, Context } from './App';
-import { TCPBufferHandler, TCPPacket } from './TCPPacket';
+import { CMD, TCPBufferHandler, TCPDataPacket, TCPPacket } from './TCPPacket';
 import { EndPoint, Pipe } from './UDPSocket';
 
 export class TCPOptions {
@@ -89,7 +88,14 @@ export class TCPServer extends Emitter {
     }
 }
 
-export class TCPSession extends Emitter implements EndPoint {
+export interface TCPPacketable {
+    writePacket(packet: TCPPacket)
+    on(event: 'packet', listener: (packet: TCPPacket) => void): this;
+    once(event: 'packet', listener: (packet: TCPPacket) => void): this;
+    off(eventName: string | symbol, listener: (...args: any[]) => void): this;
+}
+
+export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
     isReady: boolean = true;
     isClosed: boolean = false;
 
@@ -207,7 +213,7 @@ export class TCPSession extends Emitter implements EndPoint {
 }
 
 
-export class TCPClient extends Emitter implements EndPoint {
+export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
     isReady: boolean = false;
     isClosed: boolean = false;
 
@@ -371,6 +377,106 @@ export class TCPLocalForward {
 }
 
 
+export class TCPTunnleEndPoint extends Emitter implements EndPoint {
+    isReady: boolean = true;
+    isClosed: boolean = false;
+
+    packetable: TCPPacketable;
+    mappingId: number;
+    pipeId: number;
+
+    private onPacketFn: (packet: TCPPacket) => void;
+    constructor(packetable: TCPPacketable, mappingId: number, pipeId: number) {
+        super()
+        this.packetable = packetable;
+        this.mappingId = mappingId;
+        this.pipeId = pipeId;
+
+        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
+        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        this.onPacketFn = (packet: TCPPacket) => {
+            // @TODO 为了性能需要在外界分发
+            if (packet.Cmd == CMD.TCP_Data && packet.Data) {
+                let dataPacket = new TCPDataPacket()
+                dataPacket.UnSerialize(packet.Data)
+                if (dataPacket.mappingId == this.mappingId && dataPacket.pipeId == this.pipeId) {
+                    this.receiveDataPacket(dataPacket)
+                }
+            } else if (packet.Cmd == CMD.TCP_Closed && packet.Data) {
+                let dataPacket = new TCPDataPacket()
+                dataPacket.UnSerialize(packet.Data)
+                if (dataPacket.mappingId == this.mappingId && dataPacket.pipeId == this.pipeId) {
+                    this.close()
+                }
+            }
+        }
+        packetable.on('packet', this.onPacketFn)
+    }
+
+    receiveDataPacket(packet: TCPDataPacket) {
+        if (!this.isClosed) {
+            if (packet.buffer)
+                this.emit('data', packet.buffer)
+        }
+    }
+
+    protected emitCloseEventOnce() {
+        this.packetable.off('packet', this.onPacketFn)
+        this.isClosed = true;
+        this.emit('close')
+    }
+
+    write(buffer: string | Uint8Array): void {
+        if (buffer && !this.isClosed) {
+            if (typeof buffer === 'string') {
+                buffer = Buffer.from(buffer)
+            }
+            let packet = new TCPPacket()
+            packet.Cmd = CMD.TCP_Data
+            let dataPacket = new TCPDataPacket()
+            dataPacket.mappingId = this.mappingId;
+            dataPacket.pipeId = this.pipeId;
+            dataPacket.buffer = buffer as Buffer
+            packet.Data = dataPacket.Serialize()
+            this.packetable.writePacket(packet)
+        }
+    }
+
+    close(): void {
+        if (!this.isClosed)
+            this.emitCloseEventOnce()
+    }
+
+    async start() {
+        if (this.isClosed) {
+            let promise = new Promise<boolean>((resolve, reject) => {
+                resolve(false)
+            })
+            return promise
+        }
+        let promise = new Promise<boolean>((resolve, reject) => {
+            resolve(true)
+        })
+        return promise
+    }
+
+    on(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.on.call(this, ...args)
+        return this
+    }
+
+    once(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.once.call(this, ...args)
+        return this
+    }
+
+}
 
 // enum EventInfoType {
 //     Left = 1,

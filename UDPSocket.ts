@@ -1,11 +1,11 @@
 import Emitter from 'events'
-import dgram from 'dgram'
+import dgram, { RemoteInfo } from 'dgram'
 import once from 'once'
 
 // let socket = dgram.createSocket('udp4')
 
 
-interface EndPoint {
+export interface EndPoint {
     isReady: boolean
     isClosed: boolean
 
@@ -97,6 +97,23 @@ export class UDPClient extends Emitter implements EndPoint {
     close() {
         this.socket.close();
     }
+
+    on(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.on.call(this, ...args)
+        return this
+    }
+
+    once(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (msg: Buffer) => void]): this {
+        super.once.call(this, ...args)
+        return this
+    }
 }
 
 export class UDPEndPointSSide extends Emitter implements EndPoint {
@@ -124,6 +141,23 @@ export class UDPEndPointSSide extends Emitter implements EndPoint {
             this.isClosed = true
             this.emit('close')
         }
+    }
+
+    on(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.on.call(this, ...args)
+        return this
+    }
+
+    once(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (msg: Buffer) => void]): this {
+        super.once.call(this, ...args)
+        return this
     }
 }
 
@@ -218,7 +252,7 @@ export class UDPServer extends Emitter {
                 this.sessionManager.Del(session)
             })
             this.sessionManager.AddNew(session)
-            this.emit('connect', session)
+            this.emit('newConnect', session)
         }
         session.onReceiveData(buffer)
         this.emit('data', buffer, rinfo)
@@ -244,5 +278,25 @@ export class UDPServer extends Emitter {
     }
     close() {
         this.socket.close()
+    }
+
+    on(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
+    ): this {
+        super.on.call(this, ...args)
+        return this
+    }
+
+    once(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'ready', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
+    ): this {
+        super.once.call(this, ...args)
+        return this
     }
 }

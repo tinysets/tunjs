@@ -434,6 +434,11 @@ let testUDPLocalForward = async () => {
 
 let testUDPLocalForwardSpeed = async () => {
 
+    { // tcp localPortForward 8888 --> 7777
+        let localPortForward = new LocalPortForward(7777, 8888);
+        await localPortForward.start()
+    }
+    
     let forwardServer = new UDPServer(dgram.createSocket('udp4'))
     forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
         let udpClient = new UDPClient(dgram.createSocket('udp4'))

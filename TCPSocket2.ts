@@ -136,11 +136,9 @@ export class TCPSession extends Emitter implements EndPoint {
     }
 
     private onClose() {
-        this.socket.destroy();
         this.emitCloseEventOnce();
     }
     private onEnd() {
-        this.socket.destroy();
         this.emitCloseEventOnce();
     }
     private onError(error: Error) {
@@ -186,7 +184,6 @@ export class TCPSession extends Emitter implements EndPoint {
 
     close() {
         this.socket.end();
-        this.socket.destroy();
     }
 
     on(...args: [event: string, listener: (...args: any[]) => void] |
@@ -321,7 +318,6 @@ export class TCPClient extends Emitter implements EndPoint {
 
     close() {
         this.socket.end();
-        this.socket.destroy();
     }
 
     on(...args: [event: string, listener: (...args: any[]) => void] |

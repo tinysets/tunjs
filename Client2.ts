@@ -1,16 +1,130 @@
-import dgram, { RemoteInfo } from 'dgram'
+import dgram from 'dgram'
+import Emitter from 'events'
+import once from 'once'
 import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
-import { UID } from './TCPSocket';
-import { TCPClient, TCPOptions, TCPServer, TCPSession, TCPTunnleEndPoint } from "./TCPSocket2";
+import { TCPClient, TCPOptions, TCPPacketable, TCPServer, TCPSession } from "./TCPSocket2";
 import { EndPoint, Pipe, UDPClient, UDPServer, UDPSession } from './UDPSocket';
+
+export class UID {
+    private static uid = 1
+    public static GetUID() {
+        return UID.uid++
+    }
+}
+
+export class TCPTunnleEndPoint extends Emitter implements EndPoint {
+    isReady: boolean = true;
+    isClosed: boolean = false;
+
+    packetable: TCPPacketable;
+    mappingId: number;
+    pipeId: number;
+
+    // private onPacketFn: (packet: TCPPacket) => void;
+    constructor(packetable: TCPPacketable, mappingId: number, pipeId: number) {
+        super()
+        this.packetable = packetable;
+        this.mappingId = mappingId;
+        this.pipeId = pipeId;
+
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
+        // this.onPacketFn = (packet: TCPPacket) => {
+        //     // @TODO 为了性能需要在外界分发
+        //     if (packet.Cmd == CMD.TCP_Data && packet.Data) {
+        //         let dataPacket = new TCPDataPacket()
+        //         dataPacket.UnSerialize(packet.Data)
+        //         if (dataPacket.mappingId == this.mappingId && dataPacket.pipeId == this.pipeId) {
+        //             this.emitData(dataPacket.buffer)
+        //         }
+        //     } else if (packet.Cmd == CMD.TCP_Closed && packet.Data) {
+        //         let dataPacket = new TCPDataPacket()
+        //         dataPacket.UnSerialize(packet.Data)
+        //         if (dataPacket.mappingId == this.mappingId && dataPacket.pipeId == this.pipeId) {
+        //             this.close()
+        //         }
+        //     }
+        // }
+        // packetable.on('packet', this.onPacketFn)
+    }
+
+    emitData(buffer: Buffer): void {
+        if (!this.isClosed) {
+            this.emit('data', buffer)
+        }
+    }
+
+    protected emitCloseOnce() {
+        // this.packetable.off('packet', this.onPacketFn)
+        let packet = new TCPPacket()
+        packet.Cmd = CMD.TCP_Closed
+        let dataPacket = new TCPDataPacket()
+        dataPacket.mappingId = this.mappingId
+        dataPacket.pipeId = this.pipeId
+        packet.Data = dataPacket.Serialize()
+        this.packetable.writePacket(packet)
+        this.isClosed = true;
+        this.emit('close')
+    }
+
+    write(buffer: string | Uint8Array): void {
+        if (buffer && !this.isClosed) {
+            if (typeof buffer === 'string') {
+                buffer = Buffer.from(buffer)
+            }
+            let packet = new TCPPacket()
+            packet.Cmd = CMD.TCP_Data
+            let dataPacket = new TCPDataPacket()
+            dataPacket.mappingId = this.mappingId;
+            dataPacket.pipeId = this.pipeId;
+            dataPacket.buffer = buffer as Buffer
+            packet.Data = dataPacket.Serialize()
+            this.packetable.writePacket(packet)
+        }
+    }
+
+    close(): void {
+        if (!this.isClosed)
+            this.emitCloseOnce()
+    }
+
+    async start() {
+        if (this.isClosed) {
+            let promise = new Promise<boolean>((resolve, reject) => {
+                resolve(false)
+            })
+            return promise
+        }
+        let promise = new Promise<boolean>((resolve, reject) => {
+            resolve(true)
+        })
+        return promise
+    }
+
+    on(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.on.call(this, ...args)
+        return this
+    }
+
+    once(...args: [event: string, listener: (...args: any[]) => void] |
+    [event: 'close', listener: () => void] |
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
+        super.once.call(this, ...args)
+        return this
+    }
+}
 
 export class PortMapping {
     isServer: boolean
-    tcpClient: TCPClient
+    tcpClient: TCPPacketable
     forwardInfo: ForwardInfo
     map: Map<number, Pipe> = new Map()
 
-    constructor(isServer: boolean, tcpClient: TCPClient, forwardInfo: ForwardInfo) {
+    constructor(isServer: boolean, tcpClient: TCPPacketable, forwardInfo: ForwardInfo) {
         this.isServer = isServer
         this.tcpClient = tcpClient;
         this.forwardInfo = forwardInfo
@@ -150,7 +264,7 @@ export class PortMapping {
     }
 }
 
-class PortMappingManager {
+export class PortMappingManager {
 
     private portMappingMap: Map<EndPoint, Map<number, PortMapping>> = new Map()
     async newPortMapping(tcpSession: EndPoint, mappingId: number, portMapping: PortMapping) {
@@ -209,7 +323,7 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
     let mappingManager = new PortMappingManager()
 
     let options = new TCPOptions()
-    options.usePacket = false;
+    options.usePacket = true;
     let tcpClient = new TCPClient(options);
     tcpClient.setClient(remotePort, remoteAddr)
 

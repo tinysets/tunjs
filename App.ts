@@ -1,20 +1,13 @@
 import Emitter from 'events'
-import dgram from 'dgram'
 import compose from 'koa-compose'
 import { TCPPacket } from "./TCPPacket"
 import { TCPSession } from "./TCPSocket"
-import { UDPSession, UDPSocket } from './UDPSocket'
 
 export interface Context {
     tcpEvent?: string
     tcpSession?: TCPSession
     tcpPacket?: TCPPacket
     tcpBuffer?: Buffer
-    udpEvent?: string
-    udpSocket?: UDPSocket
-    udpBuffer?: Buffer
-    udpRemoteInfo?: dgram.RemoteInfo
-    udpSession?: UDPSession
 }
 
 let context: Context = {}

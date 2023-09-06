@@ -8,7 +8,8 @@ import { startServer } from './Server';
 import { startClient } from './Client';
 import { UDPClient, UDPSession, UDPLocalForward, Pipe, UDPServer } from './UDPSocket';
 import { TCPServer as TCPServer2, TCPSession as TCPSession2, TCPClient as TCPClient2, TCPLocalForward as TCPLocalForward2, TCPOptions as TCPOptions2 } from "./TCPSocket2";
-
+import { startServer as startServer2 } from './Server2';
+import { startClient as startClient2 } from './Client2';
 
 class Tester {
 
@@ -554,14 +555,47 @@ let testTCPLocalForwardSpeed = async () => {
     // [ ID] Interval           Transfer     Bandwidth       Retr
     // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec    0             sender
     // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec                  receiver
-    
+
     // local forward speed
     // [ ID] Interval           Transfer     Bandwidth       Retr
     // [  4]   0.00-5.00   sec  7.89 GBytes  13.5 Gbits/sec    3             sender
     // [  4]   0.00-5.00   sec  7.88 GBytes  13.5 Gbits/sec                  receiver
-    
+
 }
 
 // testTCPServer();
 // testTCPLocalForward();
-testTCPLocalForwardSpeed()
+// testTCPLocalForwardSpeed()
+
+let testRemotePortMapping = async () => {
+    let forwardInfos: ForwardInfo[] = [
+        { mappingId: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 22000, serverPort: 22333 },
+        { mappingId: 2, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 33000, serverPort: 33222 },
+        { mappingId: 3, type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, serverPort: 443 },
+    ];
+    await startServer2()
+    await startClient2(forwardInfos)
+
+    await delay(1000)
+
+    let server1 = await Tester.StartServer(22000)
+    let server2 = await Tester.StartServer(33000)
+
+    let client1 = await Tester.StartClient(22333)
+    let client2 = await Tester.StartClient(33222)
+
+    setInterval(async () => {
+        client2.writeBuffer('dddddd')
+        client1.writeBuffer('cccccc')
+    }, 100)
+
+    await delay(100)
+    client1.writeBuffer('client1 hello')
+    client2.writeBuffer('client2 hello')
+
+    await delay(100)
+    client1.writeBuffer('client1 hello')
+    client2.writeBuffer('client2 hello')
+}
+
+testRemotePortMapping()

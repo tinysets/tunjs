@@ -551,10 +551,15 @@ let testTCPLocalForwardSpeed = async () => {
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 8888
 
     // native speed
-
-
+    // [ ID] Interval           Transfer     Bandwidth       Retr
+    // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec    0             sender
+    // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec                  receiver
+    
     // local forward speed
-
+    // [ ID] Interval           Transfer     Bandwidth       Retr
+    // [  4]   0.00-5.00   sec  7.89 GBytes  13.5 Gbits/sec    3             sender
+    // [  4]   0.00-5.00   sec  7.88 GBytes  13.5 Gbits/sec                  receiver
+    
 }
 
 // testTCPServer();

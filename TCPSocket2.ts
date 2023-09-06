@@ -400,7 +400,7 @@ export class TCPTunnleEndPoint extends Emitter implements EndPoint {
                 let dataPacket = new TCPDataPacket()
                 dataPacket.UnSerialize(packet.Data)
                 if (dataPacket.mappingId == this.mappingId && dataPacket.pipeId == this.pipeId) {
-                    this.receiveDataPacket(dataPacket)
+                    this.onReceiveData(dataPacket.buffer)
                 }
             } else if (packet.Cmd == CMD.TCP_Closed && packet.Data) {
                 let dataPacket = new TCPDataPacket()
@@ -413,10 +413,9 @@ export class TCPTunnleEndPoint extends Emitter implements EndPoint {
         packetable.on('packet', this.onPacketFn)
     }
 
-    receiveDataPacket(packet: TCPDataPacket) {
+    onReceiveData(buffer: Buffer): void {
         if (!this.isClosed) {
-            if (packet.buffer)
-                this.emit('data', packet.buffer)
+            this.emit('data', buffer)
         }
     }
 

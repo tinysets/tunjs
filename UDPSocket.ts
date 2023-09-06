@@ -375,6 +375,7 @@ export class Pipe extends Emitter {
 
     left: EndPoint
     right: EndPoint
+    tunnle: EndPoint
     constructor(left: EndPoint, right: EndPoint) {
         super()
         this.left = left;
@@ -382,7 +383,6 @@ export class Pipe extends Emitter {
 
         let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
         this.emitCloseOnce = once(oriEmitCloseEventFn)
-
     }
 
     async link() {
@@ -447,6 +447,7 @@ export class Pipe extends Emitter {
                 return true
             }
         }
+        this.close()
         return false
     }
 
@@ -493,10 +494,12 @@ export class Pipe extends Emitter {
     }
 
     close() {
-        this.isClosed = true
-        this.left.close()
-        this.right.close()
-        this.emitCloseOnce()
+        if (!this.isClosed) {
+            this.isClosed = true
+            this.left.close()
+            this.right.close()
+            this.emitCloseOnce()
+        }
     }
 }
 

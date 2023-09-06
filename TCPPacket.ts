@@ -2,8 +2,12 @@
 export enum CMD {
     Hello = 1,
     Ping,
-    C2S_New_PortMapping,
-    S2C_New_PortMapping,
+    New_PortMapping,
+
+    TCP_Connected,
+    TCP_Data,
+    TCP_Closed,
+
 
     S2C_TCP_Connected,
     S2C_TCP_Closed,
@@ -12,12 +16,10 @@ export enum CMD {
     C2S_TCP_Closed,
     C2S_TCP_Data,
 
-    TCP_Data,
-    TCP_Closed,
 }
 
 export interface ForwardInfo {
-    id: number
+    mappingId: number
     type: 'tcp' | 'udp'
     targetAddr: string
     targetPort: number

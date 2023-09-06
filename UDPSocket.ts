@@ -19,6 +19,7 @@ export interface EndPoint {
     write(buffer: Uint8Array | string): void;
     close(): void;
     start(): Promise<boolean>;
+    emitData(buffer: Buffer): void;
 }
 
 export class UDPClient extends Emitter implements EndPoint {
@@ -99,6 +100,12 @@ export class UDPClient extends Emitter implements EndPoint {
         }
     }
 
+    emitData(buffer: Buffer) {
+        if (buffer)
+            if (this.isReady && !this.isClosed)
+                this.emit('data', buffer)
+    }
+
     write(buffer: Uint8Array | string) {
         if (buffer)
             if (this.isReady && !this.isClosed)
@@ -149,7 +156,7 @@ export class UDPSession extends Emitter implements EndPoint {
         return promise
     }
 
-    onReceiveData(buffer: Buffer): void {
+    emitData(buffer: Buffer): void {
         if (!this.isClosed) {
             this.activeTime = Date.now();
             this.emit('data', buffer)
@@ -302,7 +309,7 @@ export class UDPServer extends Emitter {
             this.sessionManager.AddNew(session)
             this.emit('newConnect', session)
         }
-        session.onReceiveData(buffer)
+        session.emitData(buffer)
         this.emit('data', session, buffer, rinfo)
     }
 
@@ -362,15 +369,20 @@ class EventQueue {
     }
 }
 
-export class Pipe {
+export class Pipe extends Emitter {
     isReady: boolean = false;
     isClosed: boolean = false;
 
     left: EndPoint
     right: EndPoint
     constructor(left: EndPoint, right: EndPoint) {
+        super()
         this.left = left;
         this.right = right;
+
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
+
     }
 
     async link() {
@@ -476,10 +488,15 @@ export class Pipe {
         }
     }
 
+    private emitCloseOnce() {
+        this.emit('close')
+    }
+
     close() {
         this.isClosed = true
         this.left.close()
         this.right.close()
+        this.emitCloseOnce()
     }
 }
 

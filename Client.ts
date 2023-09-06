@@ -95,17 +95,17 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
     tcpPacketRouter.use(CMD.Hello, async (ctx: Context, next) => {
         let tcpSession = ctx.tcpSession;
         let packet = new TCPPacket()
-        packet.Cmd = CMD.C2S_New_PortMapping
+        packet.Cmd = CMD.New_PortMapping
         packet.SetJsonData(forwardInfos)
         tcpSession.write(packet);
 
         for (const forwardInfo of forwardInfos) {
             let portMapCSide = new PortMappingCSide(forwardInfo.targetPort, forwardInfo.targetAddr)
-            mappingManager.newPortMapping(tcpSession, forwardInfo.id, portMapCSide)
+            mappingManager.newPortMapping(tcpSession, forwardInfo.mappingId, portMapCSide)
         }
     })
 
-    tcpPacketRouter.use(CMD.S2C_New_PortMapping, async (ctx: Context, next) => {
+    tcpPacketRouter.use(CMD.New_PortMapping, async (ctx: Context, next) => {
         let tcpSession = ctx.tcpSession;
         let packet = ctx.tcpPacket
         let succs: number[] = packet.GetJsonData();

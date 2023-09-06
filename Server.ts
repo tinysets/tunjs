@@ -97,7 +97,7 @@ export let startServer = async (port = 7666) => {
         tcpSession.write(packet);
     })
 
-    tcpPacketRouter.use(CMD.C2S_New_PortMapping, async (ctx: Context, next) => {
+    tcpPacketRouter.use(CMD.New_PortMapping, async (ctx: Context, next) => {
         let tcpSession = ctx.tcpSession;
         let packet = ctx.tcpPacket
         let forwardInfos: ForwardInfo[] = packet.GetJsonData();
@@ -107,12 +107,12 @@ export let startServer = async (port = 7666) => {
             let portMapSSide = new PortMappingSSide(forwardInfo.serverPort)
             let succ = await portMapSSide.start()
             if (succ) {
-                succs.push(forwardInfo.id)
-                mappingManager.newPortMapping(tcpSession, forwardInfo.id, portMapSSide)
+                succs.push(forwardInfo.mappingId)
+                mappingManager.newPortMapping(tcpSession, forwardInfo.mappingId, portMapSSide)
             }
         }
         let resPacket = new TCPPacket();
-        resPacket.Cmd = CMD.S2C_New_PortMapping;
+        resPacket.Cmd = CMD.New_PortMapping;
         resPacket.SetJsonData(succs);
         tcpSession.write(resPacket);
     })

@@ -34,6 +34,11 @@ export class UDPClient extends Emitter implements EndPoint {
         this.emitCloseEventOnce = once(oriEmitCloseEventFn)
     }
 
+    setClient(port: number, address = '127.0.0.1') {
+        this.port = port
+        this.address = address
+    }
+
     async start() {
         if (this.isClosed) {
             let promise = new Promise<boolean>((resolve, reject) => {
@@ -70,11 +75,6 @@ export class UDPClient extends Emitter implements EndPoint {
             socket.bind(0)// 让系统分配localport
         });
         return promise
-    }
-
-    setClient(port: number, address = '127.0.0.1') {
-        this.port = port
-        this.address = address
     }
 
     protected onError(error: Error) {
@@ -120,13 +120,14 @@ export class UDPClient extends Emitter implements EndPoint {
     once(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (msg: Buffer) => void]): this {
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
         super.once.call(this, ...args)
         return this
     }
 }
 
-export class UDPEndPointSSide extends Emitter implements EndPoint {
+export class UDPSession extends Emitter implements EndPoint {
     isReady: boolean = true;
     isClosed: boolean = false;
     server: UDPServer
@@ -179,16 +180,17 @@ export class UDPEndPointSSide extends Emitter implements EndPoint {
     once(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (msg: Buffer) => void]): this {
+    [event: 'data', listener: (buffer: Buffer) => void]
+    ): this {
         super.once.call(this, ...args)
         return this
     }
 }
 
-export class UDPEndPointManager {
-    mapByStr: Map<string, UDPEndPointSSide> = new Map()
+export class UDPSessionManager {
+    mapByStr: Map<string, UDPSession> = new Map()
 
-    public AddNew(udpSession: UDPEndPointSSide) {
+    public AddNew(udpSession: UDPSession) {
         this.mapByStr.set(udpSession.ipPort, udpSession)
     }
 
@@ -196,7 +198,7 @@ export class UDPEndPointManager {
         return this.mapByStr.get(ipPort)
     }
 
-    public Del(udpSession: UDPEndPointSSide) {
+    public Del(udpSession: UDPSession) {
         this.mapByStr.delete(udpSession.ipPort)
     }
 
@@ -214,7 +216,7 @@ export class UDPEndPointManager {
     }
 
     private checkDeadSession() {
-        let toCloses: UDPEndPointSSide[] = [];
+        let toCloses: UDPSession[] = [];
         let now = Date.now()
         for (const session of this.mapByStr.values()) {
             let dt = now - session.activeTime
@@ -230,7 +232,7 @@ export class UDPEndPointManager {
 }
 
 export class UDPServer extends Emitter {
-    sessionManager = new UDPEndPointManager()
+    sessionManager = new UDPSessionManager()
     socket: dgram.Socket
     port: number
     constructor(socket: dgram.Socket) {
@@ -289,7 +291,7 @@ export class UDPServer extends Emitter {
         let ipPort = rinfo.address + rinfo.port
         let session = this.sessionManager.GetByIPPort(ipPort)
         if (!session) {
-            session = new UDPEndPointSSide()
+            session = new UDPSession()
             session.server = this
             session.ipPort = ipPort
             session.address = rinfo.address
@@ -315,8 +317,8 @@ export class UDPServer extends Emitter {
     on(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => void] |
-    [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
+    [event: 'data', listener: (session: UDPSession, buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'newConnect', listener: (session: UDPSession) => void]
     ): this {
         super.on.call(this, ...args)
         return this
@@ -325,8 +327,8 @@ export class UDPServer extends Emitter {
     once(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => void] |
-    [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
+    [event: 'data', listener: (session: UDPSession, buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'newConnect', listener: (session: UDPSession) => void]
     ): this {
         super.once.call(this, ...args)
         return this
@@ -360,7 +362,7 @@ class EventQueue {
     }
 }
 
-export class UDPPipe {
+export class Pipe {
     isReady: boolean = false;
     isClosed: boolean = false;
 
@@ -494,10 +496,10 @@ export class UDPLocalForward {
 
     async start() {
         let forwardServer = new UDPServer(dgram.createSocket('udp4'))
-        forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
+        forwardServer.on('newConnect', (session: UDPSession) => {
             let udpClient = new UDPClient(dgram.createSocket('udp4'))
             udpClient.setClient(this.leftPort, this.leftAddr)
-            let pipe = new UDPPipe(udpClient, session);
+            let pipe = new Pipe(udpClient, session);
             pipe.link()
         })
         forwardServer.setServer(this.rightPort)

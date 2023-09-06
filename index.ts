@@ -6,7 +6,9 @@ import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
-import { UDPClient, UDPEndPointSSide, UDPLocalForward, UDPPipe, UDPServer } from './UDPSocket';
+import { UDPClient, UDPSession, UDPLocalForward, Pipe, UDPServer } from './UDPSocket';
+import { TCPServer as TCPServer2, TCPSession as TCPSession2, TCPClient as TCPClient2, TCPLocalForward as TCPLocalForward2, TCPOptions as TCPOptions2 } from "./TCPSocket2";
+
 
 class Tester {
 
@@ -18,7 +20,7 @@ class Tester {
             let tcpBuffer = ctx.tcpBuffer
             let msgStr = tcpBuffer.toString()
             console.log(`Server Receive : ${msgStr}`);
-            tcpSession.writeBuffer(`[server replay] : ${msgStr}`);
+            tcpSession.writeBuffer(`[server reply] : ${msgStr}`);
         })
         app.use(eventRouter.callback())
 
@@ -114,7 +116,7 @@ let testLocalProxy = async () => {
             let tcpBuffer = ctx.tcpBuffer
             let msgStr = tcpBuffer.toString()
             console.log(`Server Receive : ${msgStr}`);
-            tcpSession.writeBuffer(`server replay : ${msgStr}`);
+            tcpSession.writeBuffer(`server reply : ${msgStr}`);
         })
         app.use(eventRouter.callback())
 
@@ -377,9 +379,9 @@ let testTCPPing = async () => {
 let testUDPServer = async () => {
 
     let udpServer = new UDPServer(dgram.createSocket('udp4'))
-    udpServer.on('data', (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => {
+    udpServer.on('data', (session: UDPSession, buffer: Buffer, rinfo: RemoteInfo) => {
         console.log(`udpServer receive : ${buffer.toString()}`)
-        session.write(`udpServer relay : ${buffer.toString()}`)
+        session.write(`udpServer reply : ${buffer.toString()}`)
     })
     udpServer.setServer(7777)
     await udpServer.start()
@@ -401,18 +403,18 @@ let testUDPServer = async () => {
 let testUDPLocalForward = async () => {
 
     let udpServer = new UDPServer(dgram.createSocket('udp4'))
-    udpServer.on('data', (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => {
+    udpServer.on('data', (session: UDPSession, buffer: Buffer, rinfo: RemoteInfo) => {
         console.log(`udpServer receive : ${buffer.toString()}`)
-        session.write(`udpServer relay : ${buffer.toString()}`)
+        session.write(`udpServer reply : ${buffer.toString()}`)
     })
     udpServer.setServer(7777)
     await udpServer.start()
 
     let forwardServer = new UDPServer(dgram.createSocket('udp4'))
-    forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
+    forwardServer.on('newConnect', (session: UDPSession) => {
         let udpClient = new UDPClient(dgram.createSocket('udp4'))
         udpClient.setClient(7777)
-        let pipe = new UDPPipe(udpClient, session);
+        let pipe = new Pipe(udpClient, session);
         pipe.link()
     })
     forwardServer.setServer(8888)
@@ -461,4 +463,100 @@ let testUDPLocalForwardSpeed = async () => {
 
 // testUDPServer();
 // testUDPLocalForward();
-testUDPLocalForwardSpeed()
+// testUDPLocalForwardSpeed()
+
+
+
+let testTCPServer = async () => {
+    let options = new TCPOptions2()
+    options.usePacket = false
+    let tcpServer = new TCPServer2(options)
+    tcpServer.on('newConnect', (session: TCPSession2) => {
+        session.on('data', (buffer: Buffer) => {
+            console.log(`tcpServer receive : ${buffer.toString()}`)
+            session.write(`tcpServer reply : ${buffer.toString()}`)
+        })
+    })
+    tcpServer.setServer(7777)
+    await tcpServer.start()
+
+    let tcpClient = new TCPClient2(options)
+    tcpClient.on('data', (buffer: Buffer) => {
+        console.log(`tcpClient receive : ${buffer.toString()}`)
+    })
+    tcpClient.setClient(7777)
+    await tcpClient.start()
+
+    tcpClient.write('tcp hello1')
+    await delay(100)
+    tcpClient.write('tcp hello2')
+    await delay(100)
+    tcpClient.write('tcp hello3')
+    await delay(100)
+    tcpClient.write('tcp hello4')
+    await delay(100)
+}
+
+
+let testTCPLocalForward = async () => {
+
+    let options = new TCPOptions2()
+    options.usePacket = false
+    let tcpServer = new TCPServer2(options)
+    tcpServer.on('newConnect', (session: TCPSession2) => {
+        session.on('data', (buffer: Buffer) => {
+            console.log(`tcpServer receive : ${buffer.toString()}`)
+            session.write(`tcpServer reply : ${buffer.toString()}`)
+        })
+    })
+    tcpServer.setServer(7777)
+    await tcpServer.start()
+
+    let forwardServer = new TCPServer2(options)
+    forwardServer.on('newConnect', (session: TCPSession2) => {
+        let tcpClient = new TCPClient2(options)
+        tcpClient.setClient(7777)
+        let pipe = new Pipe(tcpClient, session);
+        pipe.link()
+    })
+    forwardServer.setServer(8888)
+    await forwardServer.start()
+
+    let tcpClient = new TCPClient2(options)
+    tcpClient.on('data', (buffer: Buffer) => {
+        console.log(`tcpClient receive : ${buffer.toString()}`)
+    })
+    tcpClient.setClient(8888)
+    await tcpClient.start()
+
+    tcpClient.write('local forward tcp hello1')
+    await delay(100)
+    tcpClient.write('local forward tcp hello2')
+    await delay(100)
+    tcpClient.write('local forward tcp hello3')
+    await delay(100)
+    tcpClient.write('local forward tcp hello4')
+    await delay(100)
+}
+
+
+let testTCPLocalForwardSpeed = async () => {
+
+    { // tcp localPortForward 8888 --> 7777
+        let localPortForward = new TCPLocalForward2(8888, 7777);
+        await localPortForward.start()
+    }
+
+    // iperf3 -s -p 7777
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 8888
+
+    // native speed
+
+
+    // local forward speed
+
+}
+
+// testTCPServer();
+// testTCPLocalForward();
+testTCPLocalForwardSpeed()

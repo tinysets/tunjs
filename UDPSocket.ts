@@ -175,12 +175,38 @@ export class UDPEndPointManager {
     public Del(udpSession: UDPEndPointSSide) {
         this.mapByStr.delete(udpSession.ipPort)
     }
+
+    private intervalTimer = null;
+    public startCheck() {
+        this.intervalTimer = setInterval(() => {
+            this.checkDeadSession()
+        }, 1000)
+    }
+    public stopCheck() {
+        if (this.intervalTimer) {
+            clearInterval(this.intervalTimer)
+            this.intervalTimer = null;
+        }
+    }
+
+    private checkDeadSession() {
+        let toCloses: UDPEndPointSSide[] = [];
+        let now = Date.now()
+        for (const session of this.mapByStr.values()) {
+            let dt = now - session.activeTime
+            if (dt > 5000) { // 5s
+                toCloses.push(session)
+            }
+        }
+        for (const session of toCloses) {
+            session.close()
+        }
+    }
+
 }
 
 export class UDPServer extends Emitter {
     sessionManager = new UDPEndPointManager()
-    private intervalTimer = null;
-
     socket: dgram.Socket
     constructor(socket: dgram.Socket) {
         super();
@@ -224,19 +250,14 @@ export class UDPServer extends Emitter {
         this.emitCloseEventOnce();
     }
     protected onReady() {
-        this.intervalTimer = setInterval(() => {
-            this.checkDeadSession()
-        }, 1000)
+        this.sessionManager.startCheck();
         this.emit('ready')
     }
     protected onClose() {
         this.emitCloseEventOnce();
     }
     protected emitCloseEventOnce() {
-        if (this.intervalTimer) {
-            clearInterval(this.intervalTimer)
-            this.intervalTimer = null;
-        }
+        this.sessionManager.stopCheck();
         this.emit('close')
     }
     protected onData(buffer: Buffer, rinfo: dgram.RemoteInfo) {
@@ -255,21 +276,7 @@ export class UDPServer extends Emitter {
             this.emit('newConnect', session)
         }
         session.onReceiveData(buffer)
-        this.emit('data', buffer, rinfo)
-    }
-
-    private checkDeadSession() {
-        let toCloses: UDPEndPointSSide[] = [];
-        let now = Date.now()
-        for (const session of this.sessionManager.mapByStr.values()) {
-            let dt = now - session.activeTime
-            if (dt > 5000) { // 5s
-                toCloses.push(session)
-            }
-        }
-        for (const session of toCloses) {
-            session.close()
-        }
+        this.emit('data', session, buffer, rinfo)
     }
 
     write(buffer: Uint8Array | string, port: number, address: string) {
@@ -283,7 +290,7 @@ export class UDPServer extends Emitter {
     on(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'data', listener: (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => void] |
     [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
     ): this {
         super.on.call(this, ...args)
@@ -293,7 +300,7 @@ export class UDPServer extends Emitter {
     once(...args: [event: string, listener: (...args: any[]) => void] |
     [event: 'close', listener: () => void] |
     [event: 'ready', listener: () => void] |
-    [event: 'data', listener: (buffer: Buffer, rinfo: RemoteInfo) => void] |
+    [event: 'data', listener: (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => void] |
     [event: 'newConnect', listener: (session: UDPEndPointSSide) => void]
     ): this {
         super.once.call(this, ...args)

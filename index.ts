@@ -1,4 +1,5 @@
 import net from 'net'
+import dgram, { RemoteInfo } from 'dgram'
 import { App, Context, TCPEventRouter, TCPPacketRouter } from './App';
 import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
@@ -348,7 +349,7 @@ let testTCPPing = async () => {
 // testLocalProxy();
 // testPortMapping();
 // testSpeed()
-testTCPPing()
+// testTCPPing()
 
 // remote proxy speed
 // iperf3 -s -p 22000
@@ -370,3 +371,32 @@ testTCPPing()
 // [ ID] Interval           Transfer     Bandwidth       Retr
 // [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec    9             sender
 // [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec                  receiver
+
+import Emitter from 'events'
+import once from 'once'
+import { UDPClient, UDPEndPointSSide, UDPServer } from './UDPSocket';
+
+
+let testUDPServer = async () => {
+
+    let udpServer = new UDPServer(dgram.createSocket('udp4'))
+    await udpServer.startServer(7777)
+
+    let udpClient = new UDPClient(dgram.createSocket('udp4'))
+    await udpClient.startClient(7777)
+
+    udpServer.on('data', (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => {
+        console.log(`udpServer receive : ${buffer.toString()}`)
+        session.write(`udpServer relay : ${buffer.toString()}`)
+    })
+    udpClient.on('data', (buffer: Buffer) => {
+        console.log(`udpClient receive : ${buffer.toString()}`)
+    })
+
+    udpClient.write('udp hello1')
+    udpClient.write('udp hello2')
+    udpClient.write('udp hello3')
+    udpClient.write('udp hello4')
+}
+
+testUDPServer();

@@ -15,8 +15,8 @@ export class TCPServer extends Emitter {
     constructor(options: TCPOptions) {
         super();
         this.options = options;
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
     }
 
     setServer(port: number) {
@@ -53,15 +53,15 @@ export class TCPServer extends Emitter {
     protected onError(error: Error) {
         console.error(error);
         this.server.close();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     protected onReady() {
         this.emit('ready')
     }
     protected onClose() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
-    protected emitCloseEventOnce() {
+    protected emitCloseOnce() {
         this.emit('close')
     }
 
@@ -107,8 +107,8 @@ export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
         super();
         this.options = options;
         this.socket = socket;
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
 
         socket.on("error", (error) => {
             this.onError(error);
@@ -142,21 +142,21 @@ export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
     }
 
     private onClose() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onEnd() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onError(error: Error) {
         console.error(error);
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onTimeout() {
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
-    private emitCloseEventOnce() {
+    private emitCloseOnce() {
         this.isClosed = true;
         this.emit('close')
     }
@@ -227,8 +227,8 @@ export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
         super();
         this.options = options
         this.socket = new net.Socket()
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
     }
 
     setClient(port: number, address = '127.0.0.1') {
@@ -283,16 +283,16 @@ export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
     protected onError(error: Error) {
         console.error(error);
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     protected onReady() {
         this.isReady = true;
         this.emit('ready')
     }
     protected onClose() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
-    protected emitCloseEventOnce() {
+    protected emitCloseOnce() {
         this.isClosed = true;
         this.emit('close')
     }
@@ -392,8 +392,8 @@ export class TCPTunnleEndPoint extends Emitter implements EndPoint {
         this.mappingId = mappingId;
         this.pipeId = pipeId;
 
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
         this.onPacketFn = (packet: TCPPacket) => {
             // @TODO 为了性能需要在外界分发
             if (packet.Cmd == CMD.TCP_Data && packet.Data) {
@@ -419,7 +419,7 @@ export class TCPTunnleEndPoint extends Emitter implements EndPoint {
         }
     }
 
-    protected emitCloseEventOnce() {
+    protected emitCloseOnce() {
         this.packetable.off('packet', this.onPacketFn)
         this.isClosed = true;
         this.emit('close')
@@ -443,7 +443,7 @@ export class TCPTunnleEndPoint extends Emitter implements EndPoint {
 
     close(): void {
         if (!this.isClosed)
-            this.emitCloseEventOnce()
+            this.emitCloseOnce()
     }
 
     async start() {

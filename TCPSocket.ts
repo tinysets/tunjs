@@ -95,8 +95,8 @@ export class TCPSession extends Emitter {
         super();
         this.options = options;
         this.socket = socket;
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
     }
 
     setApp(app: App) {
@@ -232,23 +232,23 @@ export class TCPSession extends Emitter {
     }
     private onClose() {
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onEnd() {
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onError(error: Error) {
         console.error(error);
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     private onTimeout() {
         this.socket.destroy();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
 
-    private emitCloseEventOnce() {
+    private emitCloseOnce() {
         this.emit('close', this)
         if (this.eventEmiter) {
             this.ctx.tcpEvent = "close"

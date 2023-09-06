@@ -30,8 +30,8 @@ export class UDPClient extends Emitter implements EndPoint {
     constructor(socket: dgram.Socket) {
         super();
         this.socket = socket
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
     }
 
     setClient(port: number, address = '127.0.0.1') {
@@ -80,16 +80,16 @@ export class UDPClient extends Emitter implements EndPoint {
     protected onError(error: Error) {
         console.error(error);
         this.socket.close();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     protected onReady() {
         this.isReady = true;
         this.emit('ready')
     }
     protected onClose() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
-    protected emitCloseEventOnce() {
+    protected emitCloseOnce() {
         this.isClosed = true;
         this.emit('close')
     }
@@ -238,8 +238,8 @@ export class UDPServer extends Emitter {
     constructor(socket: dgram.Socket) {
         super();
         this.socket = socket
-        let oriEmitCloseEventFn = this.emitCloseEventOnce.bind(this);
-        this.emitCloseEventOnce = once(oriEmitCloseEventFn)
+        let oriEmitCloseEventFn = this.emitCloseOnce.bind(this);
+        this.emitCloseOnce = once(oriEmitCloseEventFn)
     }
 
     setServer(port: number) {
@@ -274,16 +274,16 @@ export class UDPServer extends Emitter {
     protected onError(error: Error) {
         console.error(error);
         this.socket.close();
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
     protected onReady() {
         this.sessionManager.startCheck();
         this.emit('ready')
     }
     protected onClose() {
-        this.emitCloseEventOnce();
+        this.emitCloseOnce();
     }
-    protected emitCloseEventOnce() {
+    protected emitCloseOnce() {
         this.sessionManager.stopCheck();
         this.emit('close')
     }

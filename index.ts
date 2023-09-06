@@ -439,7 +439,7 @@ let testUDPLocalForwardSpeed = async () => {
         await localPortForward.start()
     }
 
-    {
+    { // udp localPortForward 8888 --> 7777
         let udpLocalForward = new UDPLocalForward(8888, 7777);
         await udpLocalForward.start()
     }

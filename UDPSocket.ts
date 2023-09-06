@@ -482,14 +482,14 @@ export class UDPPipe {
 }
 
 export class UDPLocalForward {
-    rightPort: number
     leftPort: number
     leftAddr: string
+    rightPort: number
     server: UDPServer
-    constructor(rightPort: number, leftPort: number, leftAddr = '127.0.0.1') {
-        this.rightPort = rightPort
-        this.leftPort = leftPort
-        this.leftAddr = leftAddr
+    constructor(fromPort: number, toPort: number, toAddr = '127.0.0.1') {
+        this.leftPort = toPort
+        this.leftAddr = toAddr
+        this.rightPort = fromPort
     }
 
     async start() {

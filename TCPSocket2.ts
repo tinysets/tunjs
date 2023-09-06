@@ -359,9 +359,9 @@ export class TCPLocalForward {
         options.usePacket = false
         let forwardServer = new TCPServer(options)
         forwardServer.on('newConnect', (session: TCPSession) => {
-            let udpClient = new TCPClient(options)
-            udpClient.setClient(this.leftPort, this.leftAddr)
-            let pipe = new Pipe(udpClient, session);
+            let tcpClient = new TCPClient(options)
+            tcpClient.setClient(this.leftPort, this.leftAddr)
+            let pipe = new Pipe(tcpClient, session);
             pipe.link()
         })
         forwardServer.setServer(this.rightPort)

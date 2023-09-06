@@ -1,11 +1,12 @@
 import net from 'net'
 import dgram, { RemoteInfo } from 'dgram'
+import delay from 'delay';
 import { App, Context, TCPEventRouter, TCPPacketRouter } from './App';
 import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
-import delay from 'delay';
+import { UDPClient, UDPEndPointSSide, UDPServer } from './UDPSocket';
 
 class Tester {
 
@@ -371,10 +372,6 @@ let testTCPPing = async () => {
 // [ ID] Interval           Transfer     Bandwidth       Retr
 // [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec    9             sender
 // [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec                  receiver
-
-import Emitter from 'events'
-import once from 'once'
-import { UDPClient, UDPEndPointSSide, UDPServer } from './UDPSocket';
 
 
 let testUDPServer = async () => {

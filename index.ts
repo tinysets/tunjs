@@ -6,7 +6,7 @@ import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
-import { UDPClient, UDPEndPointSSide, UDPServer } from './UDPSocket';
+import { UDPClient, UDPEndPointSSide, UDPPipe, UDPServer } from './UDPSocket';
 
 class Tester {
 
@@ -377,18 +377,19 @@ let testTCPPing = async () => {
 let testUDPServer = async () => {
 
     let udpServer = new UDPServer(dgram.createSocket('udp4'))
-    await udpServer.startServer(7777)
-
-    let udpClient = new UDPClient(dgram.createSocket('udp4'))
-    await udpClient.startClient(7777)
-
     udpServer.on('data', (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => {
         console.log(`udpServer receive : ${buffer.toString()}`)
         session.write(`udpServer relay : ${buffer.toString()}`)
     })
+    udpServer.setServer(7777)
+    await udpServer.start()
+
+    let udpClient = new UDPClient(dgram.createSocket('udp4'))
     udpClient.on('data', (buffer: Buffer) => {
         console.log(`udpClient receive : ${buffer.toString()}`)
     })
+    udpClient.setClient(7777)
+    await udpClient.start()
 
     udpClient.write('udp hello1')
     udpClient.write('udp hello2')
@@ -396,4 +397,39 @@ let testUDPServer = async () => {
     udpClient.write('udp hello4')
 }
 
-testUDPServer();
+
+let testUDPLocalForward = async () => {
+
+    let udpServer = new UDPServer(dgram.createSocket('udp4'))
+    udpServer.on('data', (session: UDPEndPointSSide, buffer: Buffer, rinfo: RemoteInfo) => {
+        console.log(`udpServer receive : ${buffer.toString()}`)
+        session.write(`udpServer relay : ${buffer.toString()}`)
+    })
+    udpServer.setServer(7777)
+    await udpServer.start()
+
+    let forwardServer = new UDPServer(dgram.createSocket('udp4'))
+    forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
+        let udpClient = new UDPClient(dgram.createSocket('udp4'))
+        udpClient.setClient(7777)
+        let pipe = new UDPPipe(udpClient, session);
+        pipe.link()
+    })
+    forwardServer.setServer(8888)
+    await forwardServer.start()
+
+    let udpClient = new UDPClient(dgram.createSocket('udp4'))
+    udpClient.on('data', (buffer: Buffer) => {
+        console.log(`udpClient receive : ${buffer.toString()}`)
+    })
+    udpClient.setClient(8888)
+    await udpClient.start()
+
+    udpClient.write('local forward udp hello1')
+    udpClient.write('local forward udp hello2')
+    udpClient.write('local forward udp hello3')
+    udpClient.write('local forward udp hello4')
+}
+
+// testUDPServer();
+testUDPLocalForward();

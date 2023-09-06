@@ -12,15 +12,16 @@ export interface EndPoint {
     on(event: string, listener: (...args: any[]) => void): this;
     on(event: 'close', listener: () => void): this;
     on(event: 'ready', listener: () => void): this;
-    on(event: 'data', listener: (msg: Buffer) => void): this;
+    on(event: 'data', listener: (buffer: Buffer) => void): this;
 
     once(event: string, listener: (...args: any[]) => void): this;
     once(event: 'close', listener: () => void): this;
     once(event: 'ready', listener: () => void): this;
-    once(event: 'data', listener: (msg: Buffer) => void): this;
+    once(event: 'data', listener: (buffer: Buffer) => void): this;
 
-    write(buffer: Uint8Array | string): void
-    close(): void
+    write(buffer: Uint8Array | string): void;
+    close(): void;
+    start(): Promise<boolean>;
 }
 
 export class UDPClient extends Emitter implements EndPoint {
@@ -36,12 +37,19 @@ export class UDPClient extends Emitter implements EndPoint {
         this.emitCloseEventOnce = once(oriEmitCloseEventFn)
     }
 
-    async startClient(port: number, address = '127.0.0.1') {
-        if (this.socket == null) {
-            return;
+    async start() {
+        if (this.isClosed) {
+            let promise = new Promise<boolean>((resolve, reject) => {
+                resolve(false)
+            })
+            return promise
         }
-        this.port = port
-        this.address = address
+        if (this.isReady) {
+            let promise = new Promise<boolean>((resolve, reject) => {
+                resolve(true)
+            })
+            return promise
+        }
 
         let promise = new Promise<boolean>((resolve, reject) => {
             resolve = once(resolve)
@@ -67,6 +75,11 @@ export class UDPClient extends Emitter implements EndPoint {
         return promise
     }
 
+    setClient(port: number, address = '127.0.0.1') {
+        this.port = port
+        this.address = address
+    }
+
     protected onError(error: Error) {
         console.error(error);
         this.socket.close();
@@ -90,7 +103,7 @@ export class UDPClient extends Emitter implements EndPoint {
     }
 
     write(buffer: Uint8Array | string) {
-        if (buffer && this.socket)
+        if (buffer)
             if (this.isReady && !this.isClosed)
                 this.socket.send(buffer, this.port, this.address);
     }
@@ -124,6 +137,20 @@ export class UDPEndPointSSide extends Emitter implements EndPoint {
     address: string
     port: number
     activeTime: number
+    async start() {
+        if (this.isClosed) {
+            let promise = new Promise<boolean>((resolve, reject) => {
+                resolve(false)
+            })
+            return promise
+        }
+
+        let promise = new Promise<boolean>((resolve, reject) => {
+            resolve(true)
+        })
+        return promise
+    }
+
     onReceiveData(buffer: Buffer): void {
         if (!this.isClosed) {
             this.activeTime = Date.now();
@@ -131,7 +158,7 @@ export class UDPEndPointSSide extends Emitter implements EndPoint {
         }
     }
     write(buffer: string | Uint8Array): void {
-        if (this.isReady && !this.isClosed) {
+        if (!this.isClosed) {
             this.activeTime = Date.now();
             this.server.write(buffer, this.port, this.address)
         }
@@ -208,6 +235,7 @@ export class UDPEndPointManager {
 export class UDPServer extends Emitter {
     sessionManager = new UDPEndPointManager()
     socket: dgram.Socket
+    port: number
     constructor(socket: dgram.Socket) {
         super();
         this.socket = socket
@@ -215,11 +243,11 @@ export class UDPServer extends Emitter {
         this.emitCloseEventOnce = once(oriEmitCloseEventFn)
     }
 
-    async startServer(port: number) {
-        if (this.socket == null) {
-            return;
-        }
+    setServer(port: number) {
+        this.port = port
+    }
 
+    async start() {
         let promise = new Promise<boolean>((resolve, reject) => {
             resolve = once(resolve)
             reject = once(reject)
@@ -239,7 +267,7 @@ export class UDPServer extends Emitter {
             socket.on("message", (data, rinfo) => {
                 this.onData(data, rinfo);
             });
-            socket.bind(port)
+            socket.bind(this.port)
         });
         return promise
     }
@@ -280,7 +308,7 @@ export class UDPServer extends Emitter {
     }
 
     write(buffer: Uint8Array | string, port: number, address: string) {
-        if (buffer && this.socket)
+        if (buffer)
             this.socket.send(buffer, port, address);
     }
     close() {
@@ -305,5 +333,153 @@ export class UDPServer extends Emitter {
     ): this {
         super.once.call(this, ...args)
         return this
+    }
+}
+
+enum EventInfoType {
+    Left = 1,
+    Right
+}
+class EventInfo {
+    type: EventInfoType;
+    name: 'close' | 'data';
+    buffer?: Buffer
+}
+
+class EventQueue {
+    queue: EventInfo[] = [];
+    get length() {
+        return this.queue.length
+    }
+
+    EnQueue(evnet: EventInfo) {
+        this.queue.push(evnet);
+    }
+    DeQueue() {
+        return this.queue.shift()
+    }
+    Clear() {
+        this.queue = []
+    }
+}
+
+export class UDPPipe {
+    isReady: boolean = false;
+    isClosed: boolean = false;
+
+    left: EndPoint
+    right: EndPoint
+    constructor(left: EndPoint, right: EndPoint) {
+        this.left = left;
+        this.right = right;
+    }
+
+    async link() {
+        this.left.on('close', () => {
+            if (!this.isClosed) {
+                if (!this.isReady) {
+                    let eventInfo = new EventInfo();
+                    eventInfo.type = EventInfoType.Left
+                    eventInfo.name = 'close'
+                    this.enQueue(eventInfo)
+                } else {
+                    this.close();
+                }
+            }
+        })
+        this.left.on('data', (buffer) => {
+            if (!this.isClosed) {
+                if (!this.isReady) {
+                    let eventInfo = new EventInfo();
+                    eventInfo.type = EventInfoType.Left
+                    eventInfo.name = 'data'
+                    eventInfo.buffer = buffer
+                    this.enQueue(eventInfo)
+                } else {
+                    this.right.write(buffer)
+                }
+            }
+        })
+
+        this.right.on('close', () => {
+            if (!this.isClosed) {
+                if (!this.isReady) {
+                    let eventInfo = new EventInfo();
+                    eventInfo.type = EventInfoType.Right
+                    eventInfo.name = 'close'
+                    this.enQueue(eventInfo)
+                } else {
+                    this.close();
+                }
+            }
+        })
+        this.right.on('data', (buffer) => {
+            if (!this.isClosed) {
+                if (!this.isReady) {
+                    let eventInfo = new EventInfo();
+                    eventInfo.type = EventInfoType.Right
+                    eventInfo.name = 'data'
+                    eventInfo.buffer = buffer
+                    this.enQueue(eventInfo)
+                } else {
+                    this.left.write(buffer)
+                }
+            }
+        })
+
+        let leftSucc = await this.left.start()
+        if (leftSucc) {
+            let rightSucc = await this.right.start()
+            if (rightSucc) {
+                this.isReady = true;
+                this.onReady();
+                return true
+            }
+        }
+        return false
+    }
+
+    private onReady() {
+        this.tryExecQueue()
+    }
+
+    private eventQueue = new EventQueue();
+    private enQueue(evnet: EventInfo) {
+        this.eventQueue.EnQueue(evnet)
+        this.tryExecQueue()
+    }
+    private tryExecQueue() {
+        while (true) {
+            if (this.eventQueue.length == 0) {
+                break;
+            }
+            if (!this.isReady) {
+                break;
+            }
+            if (this.isClosed) {
+                break;
+            }
+
+            let evnet = this.eventQueue.DeQueue()
+            if (evnet.type == EventInfoType.Left) {
+                if (evnet.name == 'close') {
+                    this.close();
+                } else if (evnet.name == 'data') {
+                    this.right.write(evnet.buffer)
+                }
+            } else if (evnet.type == EventInfoType.Right) {
+                if (evnet.name == 'close') {
+                    this.close();
+                } else if (evnet.name == 'data') {
+                    this.left.write(evnet.buffer)
+                }
+            }
+        }
+    }
+
+    close() {
+        this.isClosed = true
+        this.left.close()
+        this.right.close()
     }
 }

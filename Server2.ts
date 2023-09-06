@@ -1,9 +1,5 @@
-import dgram from 'dgram'
-import Emitter from 'events'
-import once from 'once'
 import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
-import { TCPClient, TCPOptions, TCPPacketable, TCPServer, TCPSession } from "./TCPSocket2";
-import { EndPoint, Pipe, UDPClient, UDPServer, UDPSession } from './UDPSocket';
+import { TCPOptions, TCPServer, TCPSession } from "./TCPSocket2";
 import { PortMapping, PortMappingManager } from './Client2';
 
 

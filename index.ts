@@ -431,5 +431,20 @@ let testUDPLocalForward = async () => {
     udpClient.write('local forward udp hello4')
 }
 
+
+let testUDPLocalForwardSpeed = async () => {
+
+    let forwardServer = new UDPServer(dgram.createSocket('udp4'))
+    forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
+        let udpClient = new UDPClient(dgram.createSocket('udp4'))
+        udpClient.setClient(7777)
+        let pipe = new UDPPipe(udpClient, session);
+        pipe.link()
+    })
+    forwardServer.setServer(8888)
+    await forwardServer.start()
+}
+
 // testUDPServer();
-testUDPLocalForward();
+// testUDPLocalForward();
+testUDPLocalForwardSpeed()

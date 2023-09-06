@@ -6,7 +6,7 @@ import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
 import { LocalPortForward, PortMappingCSide, PortMappingTest, TCPServer, TCPSession, TCPSessionOptions } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
-import { UDPClient, UDPEndPointSSide, UDPPipe, UDPServer } from './UDPSocket';
+import { UDPClient, UDPEndPointSSide, UDPLocalForward, UDPPipe, UDPServer } from './UDPSocket';
 
 class Tester {
 
@@ -438,16 +438,11 @@ let testUDPLocalForwardSpeed = async () => {
         let localPortForward = new LocalPortForward(7777, 8888);
         await localPortForward.start()
     }
-    
-    let forwardServer = new UDPServer(dgram.createSocket('udp4'))
-    forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
-        let udpClient = new UDPClient(dgram.createSocket('udp4'))
-        udpClient.setClient(7777)
-        let pipe = new UDPPipe(udpClient, session);
-        pipe.link()
-    })
-    forwardServer.setServer(8888)
-    await forwardServer.start()
+
+    {
+        let udpLocalForward = new UDPLocalForward(8888, 7777);
+        await udpLocalForward.start()
+    }
 
     // iperf3 -s -p 7777
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -u -p 8888
@@ -456,7 +451,7 @@ let testUDPLocalForwardSpeed = async () => {
     // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
     // [  4]   0.00-5.00   sec  15.3 GBytes  26.2 Gbits/sec  0.052 ms  214146/748612 (29%)  
     // [  4] Sent 748612 datagrams
-    
+
     // local forward speed
     // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
     // [  4]   0.00-5.00   sec  15.9 GBytes  27.4 Gbits/sec  0.876 ms  776224/780757 (99%)  

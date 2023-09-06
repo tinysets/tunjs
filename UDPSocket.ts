@@ -2,9 +2,6 @@ import Emitter from 'events'
 import dgram, { RemoteInfo } from 'dgram'
 import once from 'once'
 
-// let socket = dgram.createSocket('udp4')
-
-
 export interface EndPoint {
     isReady: boolean
     isClosed: boolean
@@ -481,5 +478,30 @@ export class UDPPipe {
         this.isClosed = true
         this.left.close()
         this.right.close()
+    }
+}
+
+export class UDPLocalForward {
+    rightPort: number
+    leftPort: number
+    leftAddr: string
+    server: UDPServer
+    constructor(rightPort: number, leftPort: number, leftAddr = '127.0.0.1') {
+        this.rightPort = rightPort
+        this.leftPort = leftPort
+        this.leftAddr = leftAddr
+    }
+
+    async start() {
+        let forwardServer = new UDPServer(dgram.createSocket('udp4'))
+        forwardServer.on('newConnect', (session: UDPEndPointSSide) => {
+            let udpClient = new UDPClient(dgram.createSocket('udp4'))
+            udpClient.setClient(this.leftPort, this.leftAddr)
+            let pipe = new UDPPipe(udpClient, session);
+            pipe.link()
+        })
+        forwardServer.setServer(this.rightPort)
+        this.server = forwardServer;
+        await forwardServer.start()
     }
 }

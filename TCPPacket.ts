@@ -32,7 +32,7 @@ export class TCPPacket {
         if (this.Data != null) {
             l += this.Data.length
         }
-        let buffer = Buffer.alloc(l)
+        let buffer = Buffer.allocUnsafe(l)
 
         buffer.writeUInt32LE(l, 0)
         buffer.writeUInt32LE(this.Cmd, 4)
@@ -84,8 +84,7 @@ export class TCPBufferHandler {
         packet.Cmd = this.recvdBuffer.readUInt32LE(4);
         let dataLength = packetDataLength - 8;
         if (dataLength > 0) {
-            let data = Buffer.alloc(dataLength)
-            this.recvdBuffer.copy(data, 0, 8)
+            let data = this.recvdBuffer.subarray(8, 8 + dataLength)
             packet.Data = data
         }
 
@@ -93,8 +92,7 @@ export class TCPBufferHandler {
         if (remainLength == 0) {
             this.recvdBuffer = null;
         } else {
-            let data = Buffer.alloc(remainLength)
-            this.recvdBuffer.copy(data, 0, packetDataLength)
+            let data = this.recvdBuffer.subarray(packetDataLength)
             this.recvdBuffer = data;
         }
 
@@ -111,11 +109,7 @@ export class TCPDataPacket {
         if (data.length >= 8) {
             this.mappingId = data.readUInt32LE(0)
             this.id = data.readUInt32LE(4)
-            let dataLength = data.length - 8
-            this.buffer = Buffer.alloc(dataLength)
-            if (dataLength > 0) {
-                data.copy(this.buffer, 0, 8)
-            }
+            this.buffer = data.subarray(8)
         }
     }
 
@@ -124,7 +118,7 @@ export class TCPDataPacket {
         if (this.buffer) {
             length += this.buffer.length
         }
-        let data = Buffer.alloc(length)
+        let data = Buffer.allocUnsafe(length)
         data.writeUint32LE(this.mappingId, 0)
         data.writeUint32LE(this.id, 4)
         if (this.buffer && this.buffer.length > 0) {

@@ -448,6 +448,20 @@ let testUDPLocalForwardSpeed = async () => {
     })
     forwardServer.setServer(8888)
     await forwardServer.start()
+
+    // iperf3 -s -p 7777
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -u -p 8888
+
+    // native speed
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  4]   0.00-5.00   sec  15.3 GBytes  26.2 Gbits/sec  0.052 ms  214146/748612 (29%)  
+    // [  4] Sent 748612 datagrams
+    
+    // local forward speed
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  4]   0.00-5.00   sec  15.9 GBytes  27.4 Gbits/sec  0.876 ms  776224/780757 (99%)  
+    // [  4] Sent 780757 datagrams
+
 }
 
 // testUDPServer();

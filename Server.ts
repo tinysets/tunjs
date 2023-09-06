@@ -38,7 +38,7 @@ class PortMappingManager {
 
             let dataPacket = new TCPDataPacket()
             dataPacket.mappingId = mappingId;
-            dataPacket.id = id;
+            dataPacket.pipeId = id;
             dataPacket.buffer = buffer;
             packet.Data = dataPacket.Serialize()
             tcpSession.write(packet)
@@ -127,7 +127,7 @@ export let startServer = async (port = 7666) => {
         let packet = ctx.tcpPacket
         let dataPacket = new TCPDataPacket()
         dataPacket.UnSerialize(packet.Data)
-        mappingManager.leftData(tcpSession, dataPacket.mappingId, dataPacket.id, dataPacket.buffer)
+        mappingManager.leftData(tcpSession, dataPacket.mappingId, dataPacket.pipeId, dataPacket.buffer)
     })
 
     let tcpEventRouter = new TCPEventRouter();

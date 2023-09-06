@@ -11,6 +11,9 @@ export enum CMD {
 
     C2S_TCP_Closed,
     C2S_TCP_Data,
+
+    TCP_Data,
+    TCP_Closed,
 }
 
 export interface ForwardInfo {
@@ -102,14 +105,16 @@ export class TCPBufferHandler {
 
 export class TCPDataPacket {
     mappingId: number
-    id: number
+    pipeId: number
     buffer: Buffer
 
     public UnSerialize(data: Buffer) {
         if (data.length >= 8) {
             this.mappingId = data.readUInt32LE(0)
-            this.id = data.readUInt32LE(4)
-            this.buffer = data.subarray(8)
+            this.pipeId = data.readUInt32LE(4)
+            if (data.length > 8) {
+                this.buffer = data.subarray(8)
+            }
         }
     }
 
@@ -120,7 +125,7 @@ export class TCPDataPacket {
         }
         let data = Buffer.allocUnsafe(length)
         data.writeUint32LE(this.mappingId, 0)
-        data.writeUint32LE(this.id, 4)
+        data.writeUint32LE(this.pipeId, 4)
         if (this.buffer && this.buffer.length > 0) {
             this.buffer.copy(data, 8, 0)
         }

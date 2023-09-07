@@ -527,7 +527,7 @@ let testUDPRemoteForwardSpeed = async () => {
 
     let forwardInfos: ForwardInfo[] = [
         { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
-        { mappingId: 1, type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
+        { mappingId: 2, type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
     ];
 
     if (process.platform == 'linux') {

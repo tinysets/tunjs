@@ -310,23 +310,6 @@ let testTCPRemotePortMapping = async () => {
     client2.write('client2 hello')
 }
 
-
-let testTCPRemoteForwardSpeed = async () => {
-    // on linux
-    // iperf3 -s -p 7777
-    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
-
-    let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
-    ];
-
-    if (process.platform == 'linux') {
-        await startServer()
-    } else if (process.platform == 'win32') {
-        await startClient(forwardInfos, 7666, '10.21.248.180')
-    }
-}
-
 // remote proxy speed
 // iperf3 -s -p 22000
 // iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22333
@@ -520,9 +503,10 @@ let testUDPRemotePortMapping = async () => {
     client1.write('client1 hello')
 }
 
-let testUDPRemoteForwardSpeed = async () => {
+let testRemoteForwardSpeed = async () => {
     // on linux
     // iperf3 -s -p 7777
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
 
     let forwardInfos: ForwardInfo[] = [
@@ -535,6 +519,44 @@ let testUDPRemoteForwardSpeed = async () => {
     } else if (process.platform == 'win32') {
         await startClient(forwardInfos, 7666, '10.21.248.180')
     }
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
+    // udp proxy client
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  4]   0.00-5.00   sec  11.6 GBytes  19.9 Gbits/sec  0.345 ms  499174/569332 (88%)  
+    // [  4] Sent 569332 datagrams
+    // udp proxy server
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  5]   0.00-22.56  sec  0.00 Bytes  0.00 bits/sec  0.345 ms  499174/569332 (88%)  
+
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 7777 -u
+    // udp native client
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  4]   0.00-5.00   sec  15.0 GBytes  25.7 Gbits/sec  0.001 ms  179984/734898 (24%)  
+    // [  4] Sent 734898 datagrams
+    // udp native server
+    // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
+    // [  5]   0.00-5.04   sec  0.00 Bytes  0.00 bits/sec  0.001 ms  179984/734898 (24%)  
+
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
+    // tcp proxy client
+    // [ ID] Interval           Transfer     Bandwidth       Retr
+    // [  4]   0.00-5.01   sec  2.24 GBytes  3.84 Gbits/sec    0             sender
+    // [  4]   0.00-5.01   sec   840 MBytes  1.40 Gbits/sec                  receiver
+    // tcp proxy server
+    // [ ID] Interval           Transfer     Bandwidth
+    // [  5]   0.00-34.33  sec  0.00 Bytes  0.00 bits/sec                  sender
+    // [  5]   0.00-34.33  sec   840 MBytes   205 Mbits/sec                  receiver
+
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 7777
+    // tcp native client
+    // [ ID] Interval           Transfer     Bandwidth       Retr
+    // [  4]   0.00-5.00   sec  25.5 GBytes  43.8 Gbits/sec    2             sender
+    // [  4]   0.00-5.00   sec  25.5 GBytes  43.8 Gbits/sec                  receiver
+    // tcp native server
+    // [ ID] Interval           Transfer     Bandwidth
+    // [  5]   0.00-5.04   sec  0.00 Bytes  0.00 bits/sec                  sender
+    // [  5]   0.00-5.04   sec  25.5 GBytes  43.4 Gbits/sec                  receiver
+
 }
 
 
@@ -544,14 +566,14 @@ let main = async () => {
     // testTCPLocalForwardSpeed()
     // await testTCPPing()
     // testTCPRemotePortMapping()
-    // testTCPRemoteForwardSpeed()
 
     // testUDPServer();
     // testUDPLocalForward();
     // testUDPLocalForwardSpeed()
     // await testUDPPing()
     // testUDPRemotePortMapping()
-    testUDPRemoteForwardSpeed()
+
+    testRemoteForwardSpeed()
 
 }
 

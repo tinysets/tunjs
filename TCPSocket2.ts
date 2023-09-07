@@ -162,24 +162,25 @@ export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
     }
 
     private onData(buffer: Buffer) {
-        this.emit('data', buffer)
-        if (this.options.usePacket) {
-            this.bufferHandler.put(buffer);
-            while (true) {
-                let tcpPacket = this.bufferHandler.tryGetMsgPacket()
-                if (tcpPacket) {
-                    this.emit('packet', tcpPacket)
-                } else {
-                    break;
-                }
-            }
-        }
+        this.emitData(buffer)
+
     }
 
     emitData(buffer: Buffer) {
-        if (buffer)
-            if (this.isReady && !this.isClosed)
-                this.emit('data', buffer)
+        if (buffer && this.isReady && !this.isClosed) {
+            this.emit('data', buffer)
+            if (this.options.usePacket) {
+                this.bufferHandler.put(buffer);
+                while (true) {
+                    let tcpPacket = this.bufferHandler.tryGetMsgPacket()
+                    if (tcpPacket) {
+                        this.emit('packet', tcpPacket)
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     write(buffer: Uint8Array | string) {
@@ -190,8 +191,7 @@ export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
 
     writePacket(packet: TCPPacket) {
         if (packet)
-            if (this.isReady && !this.isClosed)
-                this.socket.write(packet.GetSendBuffer());
+            this.write(packet.GetSendBuffer())
     }
 
     close() {
@@ -303,24 +303,25 @@ export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
         this.emit('close')
     }
     private onData(buffer: Buffer) {
-        this.emit('data', buffer)
-        if (this.options.usePacket) {
-            this.bufferHandler.put(buffer);
-            while (true) {
-                let tcpPacket = this.bufferHandler.tryGetMsgPacket()
-                if (tcpPacket) {
-                    this.emit('packet', tcpPacket)
-                } else {
-                    break;
-                }
-            }
-        }
+        this.emitData(buffer)
+
     }
 
     emitData(buffer: Buffer) {
-        if (buffer)
-            if (this.isReady && !this.isClosed)
-                this.emit('data', buffer)
+        if (buffer && this.isReady && !this.isClosed) {
+            this.emit('data', buffer)
+            if (this.options.usePacket) {
+                this.bufferHandler.put(buffer);
+                while (true) {
+                    let tcpPacket = this.bufferHandler.tryGetMsgPacket()
+                    if (tcpPacket) {
+                        this.emit('packet', tcpPacket)
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
     }
 
     write(buffer: Uint8Array | string) {
@@ -331,8 +332,7 @@ export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
 
     writePacket(packet: TCPPacket) {
         if (packet)
-            if (this.isReady && !this.isClosed)
-                this.socket.write(packet.GetSendBuffer());
+            this.write(packet.GetSendBuffer())
     }
 
     close() {

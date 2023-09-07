@@ -96,7 +96,7 @@ export class UDPClient extends Emitter implements EndPoint {
     }
     protected onData(buffer: Buffer, rinfo: dgram.RemoteInfo) {
         if (rinfo.address == this.address && rinfo.port == this.port) {
-            this.emit('data', buffer)
+            this.emitData(buffer)
         }
     }
 

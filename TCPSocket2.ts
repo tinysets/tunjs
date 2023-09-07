@@ -384,6 +384,11 @@ export class TCPLocalForward {
         })
         forwardServer.setServer(this.rightPort)
         this.server = forwardServer;
-        await forwardServer.start()
+        let succ = await forwardServer.start()
+        if (!succ) {
+            console.error('本地代理启动失败!');
+        } else {
+            console.log(`tcp proxy server port:${this.rightPort}`);
+        }
     }
 }

@@ -141,6 +141,7 @@ export class PortMapping {
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
+                    console.log(`tcp proxy server port:${this.forwardInfo.serverPort}`);
                     tcpServer.on('newConnect', (rometeSession: TCPSession) => {
                         this.onServerNewConnect(rometeSession)
                     })
@@ -153,6 +154,7 @@ export class PortMapping {
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
+                    console.log(`udp proxy server port:${this.forwardInfo.serverPort}`);
                     udpServer.on('newConnect', (rometeSession: UDPSession) => {
                         this.onServerNewConnect(rometeSession)
                     })

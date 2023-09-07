@@ -524,6 +524,11 @@ export class UDPLocalForward {
         })
         forwardServer.setServer(this.rightPort)
         this.server = forwardServer;
-        await forwardServer.start()
+        let succ = await forwardServer.start()
+        if (!succ) {
+            console.error('本地代理启动失败!');
+        } else {
+            console.log(`udp proxy server port:${this.rightPort}`);
+        }
     }
 }

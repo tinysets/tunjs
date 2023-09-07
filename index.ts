@@ -310,6 +310,18 @@ let testTCPRemotePortMapping = async () => {
     client2.write('client2 hello')
 }
 
+
+let testTCPRemoteForwardSpeed = async () => {
+    // iperf3 -s -p 7777
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
+
+    let forwardInfos: ForwardInfo[] = [
+        { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
+    ];
+    await startServer()
+    // await startClient(forwardInfos)
+}
+
 // remote proxy speed
 // iperf3 -s -p 22000
 // iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22333
@@ -510,11 +522,12 @@ let main = async () => {
     // testTCPLocalForwardSpeed()
     // await testTCPPing()
     // testTCPRemotePortMapping()
+    testTCPRemoteForwardSpeed()
 
     // testUDPServer();
     // testUDPLocalForward();
     // testUDPLocalForwardSpeed()
-    await testUDPPing()
+    // await testUDPPing()
     // testUDPRemotePortMapping()
 
 }

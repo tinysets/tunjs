@@ -1,11 +1,10 @@
-import net from 'net'
 import dgram, { RemoteInfo } from 'dgram'
 import delay from 'delay';
 import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
-import { UDPClient, UDPSession, UDPLocalForward, Pipe, UDPServer } from './UDPSocket';
+import { UDPClient, UDPSession, UDPLocalForward, UDPServer } from './UDPSocket';
 import { TCPServer, TCPSession, TCPClient, TCPLocalForward, TCPOptions } from "./TCPSocket2";
-import { startServer as startServer } from './Server2';
-import { startClient as startClient } from './Client2';
+import { startServer } from './Server';
+import { startClient } from './Client';
 
 class Tester {
 

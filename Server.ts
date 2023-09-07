@@ -1,6 +1,6 @@
 import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
 import { TCPOptions, TCPServer, TCPSession } from "./TCPSocket2";
-import { PortMapping, PortMappingManager } from './Client2';
+import { PortMapping, PortMappingManager } from './Client';
 
 
 export let startServer = async (port = 7666) => {

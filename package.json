@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "commander": "^8.3.0",
     "delay": "^5.0.0",
     "delegates": "^1.0.0",
     "koa-compose": "^4.1.0",

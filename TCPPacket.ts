@@ -21,11 +21,12 @@ export enum CMD {
 
 
 export class ForwardInfo {
-    mappingId: number
+    mappingId: number = 0
+    isLocalForward = false
     type: 'tcp' | 'udp'
     targetAddr: string
     targetPort: number
-    serverPort: number
+    fromPort: number
 
     constructor(jsonObj?) {
         this.from(jsonObj)
@@ -33,7 +34,7 @@ export class ForwardInfo {
     from(jsonObj) {
         if (jsonObj) {
             Object.assign(this, jsonObj)
-            this.mappingId = hashCode(this.type + this.targetAddr + this.targetPort + this.serverPort)
+            this.mappingId = hashCode(this.type + this.targetAddr + this.targetPort + this.fromPort)
             let a = 0
         }
     }

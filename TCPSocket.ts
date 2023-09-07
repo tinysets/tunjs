@@ -366,9 +366,9 @@ export class TCPLocalForward {
     leftAddr: string
     rightPort: number
     server: TCPServer
-    constructor(fromPort: number, toPort: number, toAddr = '127.0.0.1') {
-        this.leftPort = toPort
-        this.leftAddr = toAddr
+    constructor(fromPort: number, targetPort: number, targetAddr = '127.0.0.1') {
+        this.leftPort = targetPort
+        this.leftAddr = targetAddr
         this.rightPort = fromPort
     }
 
@@ -388,7 +388,7 @@ export class TCPLocalForward {
         if (!succ) {
             console.error('本地代理启动失败!');
         } else {
-            console.log(`tcp proxy server port:${this.rightPort}`);
+            console.log(`local tcp proxy server port:${this.rightPort}`);
         }
     }
 }

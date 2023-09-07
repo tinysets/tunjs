@@ -45,5 +45,5 @@ export let startServer = async (port = 7666) => {
         })
     });
 
-    await tcpServer.start()
+    return await tcpServer.start()
 }

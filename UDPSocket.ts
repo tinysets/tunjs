@@ -508,9 +508,9 @@ export class UDPLocalForward {
     leftAddr: string
     rightPort: number
     server: UDPServer
-    constructor(fromPort: number, toPort: number, toAddr = '127.0.0.1') {
-        this.leftPort = toPort
-        this.leftAddr = toAddr
+    constructor(fromPort: number, targetPort: number, targetAddr = '127.0.0.1') {
+        this.leftPort = targetPort
+        this.leftAddr = targetAddr
         this.rightPort = fromPort
     }
 
@@ -528,7 +528,7 @@ export class UDPLocalForward {
         if (!succ) {
             console.error('本地代理启动失败!');
         } else {
-            console.log(`udp proxy server port:${this.rightPort}`);
+            console.log(`local udp proxy server port:${this.rightPort}`);
         }
     }
 }

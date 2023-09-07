@@ -137,13 +137,13 @@ export class PortMapping {
                 let options = new TCPOptions();
                 options.usePacket = false;
                 let tcpServer = new TCPServer(options);
-                tcpServer.setServer(this.forwardInfo.serverPort)
+                tcpServer.setServer(this.forwardInfo.fromPort)
                 let succ = await tcpServer.start()
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
                     this.tcpServer = tcpServer;
-                    console.log(`tcp proxy server port:${this.forwardInfo.serverPort}`);
+                    console.log(`tcp proxy server port:${this.forwardInfo.fromPort}`);
                     tcpServer.on('newConnect', (rometeSession: TCPSession) => {
                         this.onServerNewConnect(rometeSession)
                     })
@@ -151,13 +151,13 @@ export class PortMapping {
                 return succ
             } else {
                 let udpServer = new UDPServer(dgram.createSocket('udp4'));
-                udpServer.setServer(this.forwardInfo.serverPort)
+                udpServer.setServer(this.forwardInfo.fromPort)
                 let succ = await udpServer.start()
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
                     this.udpServer = udpServer;
-                    console.log(`udp proxy server port:${this.forwardInfo.serverPort}`);
+                    console.log(`udp proxy server port:${this.forwardInfo.fromPort}`);
                     udpServer.on('newConnect', (rometeSession: UDPSession) => {
                         this.onServerNewConnect(rometeSession)
                     })
@@ -377,5 +377,5 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
         })
     }
 
-    await tcpClient.start();
+    return await tcpClient.start();
 }

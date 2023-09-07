@@ -312,14 +312,19 @@ let testTCPRemotePortMapping = async () => {
 
 
 let testTCPRemoteForwardSpeed = async () => {
+    // on linux
     // iperf3 -s -p 7777
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
 
     let forwardInfos: ForwardInfo[] = [
         { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
     ];
-    await startServer()
-    // await startClient(forwardInfos)
+
+    if (process.platform == 'linux') {
+        await startServer()
+    } else if (process.platform == 'win32') {
+        await startClient(forwardInfos, 7666, '10.21.248.180')
+    }
 }
 
 // remote proxy speed

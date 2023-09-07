@@ -168,7 +168,7 @@ let testTCPLocalForwardSpeed = async () => {
 }
 let testTCPPing = async () => {
     let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 },
+        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 }),
     ];
     await startServer()
     await startClient(forwardInfos)
@@ -279,9 +279,9 @@ let testTCPPing = async () => {
 
 let testTCPRemotePortMapping = async () => {
     let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 },
-        { mappingId: 2, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 8880, serverPort: 80 },
-        { mappingId: 3, type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, serverPort: 443 },
+        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 }),
+        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 8880, serverPort: 80 }),
+        ForwardInfo.From({ type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, serverPort: 443 }),
     ];
     await startServer()
     await startClient(forwardInfos)
@@ -362,7 +362,7 @@ let testUDPLocalForwardSpeed = async () => {
 
 let testUDPPing = async () => {
     let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 },
+        ForwardInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 }),
     ];
     await startServer()
     await startClient(forwardInfos)
@@ -456,7 +456,7 @@ let testUDPPing = async () => {
 
 let testUDPRemotePortMapping = async () => {
     let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 },
+        ForwardInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, serverPort: 9999 }),
     ];
     await startServer()
     await startClient(forwardInfos)
@@ -485,8 +485,8 @@ let testRemoteForwardSpeed = async () => {
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
 
     let forwardInfos: ForwardInfo[] = [
-        { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
-        { mappingId: 2, type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
+        ForwardInfo.From({ type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 }),
+        ForwardInfo.From({ type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 }),
     ];
 
     if (process.platform == 'linux') {

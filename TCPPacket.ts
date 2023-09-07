@@ -1,3 +1,4 @@
+import { hashCode } from "./Utils"
 
 export enum CMD {
     Hello = 1,
@@ -18,12 +19,28 @@ export enum CMD {
 
 }
 
-export interface ForwardInfo {
+
+export class ForwardInfo {
     mappingId: number
     type: 'tcp' | 'udp'
     targetAddr: string
     targetPort: number
     serverPort: number
+
+    constructor(jsonObj?) {
+        this.from(jsonObj)
+    }
+    from(jsonObj) {
+        if (jsonObj) {
+            Object.assign(this, jsonObj)
+            this.mappingId = hashCode(this.type + this.targetAddr + this.targetPort + this.serverPort)
+            let a = 0
+        }
+    }
+
+    static From(jsonObj) {
+        return new ForwardInfo(jsonObj);
+    }
 }
 
 

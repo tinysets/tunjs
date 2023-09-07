@@ -27,6 +27,7 @@ export let startServer = async (port = 7666) => {
                 tcpSession.writePacket(packet);
             } else if (packet.Cmd == CMD.New_PortMapping) {
                 let forwardInfos: ForwardInfo[] = packet.GetJsonData();
+                forwardInfos = forwardInfos.map((v) => ForwardInfo.From(v))
                 let isServer = true;
                 for (const forwardInfo of forwardInfos) {
                     let portMapping = new PortMapping(isServer, tcpSession, forwardInfo)

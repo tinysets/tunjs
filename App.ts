@@ -1,7 +1,7 @@
 import Emitter from 'events'
 import compose from 'koa-compose'
 import { TCPPacket } from "./TCPPacket"
-import { TCPSession } from "./TCPSocket"
+import { TCPSession } from "./TCPSocket2"
 
 export interface Context {
     tcpEvent?: string

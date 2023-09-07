@@ -1,8 +1,8 @@
 import dgram, { RemoteInfo } from 'dgram'
 import delay from 'delay';
 import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
-import { UDPClient, UDPSession, UDPLocalForward, UDPServer } from './UDPSocket';
-import { TCPServer, TCPSession, TCPClient, TCPLocalForward, TCPOptions } from "./TCPSocket";
+import { UDPServer, UDPSession, UDPClient, UDPLocalForward } from './UDPSocket';
+import { TCPServer, TCPSession, TCPClient, TCPOptions, TCPLocalForward } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
 
@@ -103,10 +103,9 @@ class Tester {
     }
 
     static Now() {
-        // let now = Date.now();
-        // return now;
         let nowNano = Tester.NanoNow();
         let now = Number(nowNano) / 1000000;
+        // let now = Date.now();
         // console.log(now)
         return now;
     }
@@ -308,29 +307,6 @@ let testTCPRemotePortMapping = async () => {
     client1.write('client1 hello')
     client2.write('client2 hello')
 }
-
-// remote proxy speed
-// iperf3 -s -p 22000
-// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22333
-// [ ID] Interval           Transfer     Bandwidth       Retr
-// [  4]   0.00-5.00   sec  1.72 GBytes  2.96 Gbits/sec    3             sender
-// [  4]   0.00-5.00   sec  1.71 GBytes  2.94 Gbits/sec                  receiver
-
-// local proxy speed
-// iperf3 -s -p 22000
-// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22222
-// [ ID] Interval           Transfer     Bandwidth       Retr
-// [  4]   0.00-5.00   sec  8.04 GBytes  13.8 Gbits/sec    2             sender
-// [  4]   0.00-5.00   sec  8.02 GBytes  13.8 Gbits/sec                  receiver
-
-// native speed
-// iperf3 -s -p 22000
-// iperf3 -c 127.0.0.1 -l 1M -t 5 -p 22000
-// [ ID] Interval           Transfer     Bandwidth       Retr
-// [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec    9             sender
-// [  4]   0.00-5.00   sec  28.1 GBytes  48.2 Gbits/sec                  receiver
-
-
 let testUDPServer = async () => {
 
     let udpServer = await Tester.UDPServer(7777)

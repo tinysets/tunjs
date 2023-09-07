@@ -1,5 +1,5 @@
-import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
-import { TCPOptions, TCPServer, TCPSession } from "./TCPSocket";
+import { CMD, ForwardInfo, TCPPacket, TCPDataPacket } from './TCPPacket';
+import { TCPServer, TCPSession, TCPOptions } from "./TCPSocket";
 import { PortMapping, PortMappingManager } from './Client';
 
 

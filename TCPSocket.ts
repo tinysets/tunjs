@@ -1,7 +1,7 @@
 import Emitter from 'events'
 import net from 'net'
 import once from 'once'
-import { TCPBufferHandler, TCPPacket } from './TCPPacket';
+import { TCPPacket, TCPBufferHandler } from './TCPPacket';
 import { EndPoint, Pipe } from './UDPSocket';
 
 export class TCPOptions {

@@ -1,9 +1,9 @@
-import dgram from 'dgram'
 import Emitter from 'events'
+import dgram from 'dgram'
 import once from 'once'
 import { CMD, ForwardInfo, TCPDataPacket, TCPPacket } from './TCPPacket';
-import { TCPClient, TCPOptions, TCPPacketable, TCPServer, TCPSession } from "./TCPSocket";
-import { EndPoint, Pipe, UDPClient, UDPServer, UDPSession } from './UDPSocket';
+import { TCPServer, TCPSession, TCPClient, TCPOptions, TCPPacketable, } from "./TCPSocket";
+import { UDPServer, UDPSession, UDPClient, EndPoint, Pipe } from './UDPSocket';
 
 export class UID {
     private static uid = 1

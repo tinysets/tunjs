@@ -123,7 +123,8 @@ export class PortMapping {
     tcpClient: TCPPacketable
     forwardInfo: ForwardInfo
     map: Map<number, Pipe> = new Map()
-
+    tcpServer: TCPServer
+    udpServer: UDPServer
     constructor(isServer: boolean, tcpClient: TCPPacketable, forwardInfo: ForwardInfo) {
         this.isServer = isServer
         this.tcpClient = tcpClient;
@@ -141,6 +142,7 @@ export class PortMapping {
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
+                    this.tcpServer = tcpServer;
                     console.log(`tcp proxy server port:${this.forwardInfo.serverPort}`);
                     tcpServer.on('newConnect', (rometeSession: TCPSession) => {
                         this.onServerNewConnect(rometeSession)
@@ -154,6 +156,7 @@ export class PortMapping {
                 if (!succ) {
                     console.error('本地代理启动失败!');
                 } else {
+                    this.udpServer = udpServer;
                     console.log(`udp proxy server port:${this.forwardInfo.serverPort}`);
                     udpServer.on('newConnect', (rometeSession: UDPSession) => {
                         this.onServerNewConnect(rometeSession)
@@ -262,6 +265,12 @@ export class PortMapping {
         }
         for (const item of pipes) {
             item.close()
+        }
+        if (this.tcpServer) {
+            this.tcpServer.close();
+        }
+        if (this.udpServer) {
+            this.udpServer.close();
         }
     }
 }

@@ -520,6 +520,23 @@ let testUDPRemotePortMapping = async () => {
     client1.write('client1 hello')
 }
 
+let testUDPRemoteForwardSpeed = async () => {
+    // on linux
+    // iperf3 -s -p 7777
+    // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
+
+    let forwardInfos: ForwardInfo[] = [
+        { mappingId: 1, type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
+        { mappingId: 1, type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, serverPort: 9999 },
+    ];
+
+    if (process.platform == 'linux') {
+        await startServer()
+    } else if (process.platform == 'win32') {
+        await startClient(forwardInfos, 7666, '10.21.248.180')
+    }
+}
+
 
 let main = async () => {
     // testTCPServer();
@@ -527,13 +544,14 @@ let main = async () => {
     // testTCPLocalForwardSpeed()
     // await testTCPPing()
     // testTCPRemotePortMapping()
-    testTCPRemoteForwardSpeed()
+    // testTCPRemoteForwardSpeed()
 
     // testUDPServer();
     // testUDPLocalForward();
     // testUDPLocalForwardSpeed()
     // await testUDPPing()
     // testUDPRemotePortMapping()
+    testUDPRemoteForwardSpeed()
 
 }
 

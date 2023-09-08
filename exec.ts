@@ -1,29 +1,18 @@
 #!/usr/bin/env node
+
 import fs from 'fs';
-import delay from 'delay';
-import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
-import { UDPServer, UDPSession, UDPClient, UDPLocalForward } from './UDPSocket';
-import { TCPServer, TCPSession, TCPClient, TCPOptions, TCPLocalForward } from "./TCPSocket";
+import { ForwardInfo } from './TCPPacket';
+import { UDPLocalForward } from './UDPSocket';
+import { TCPLocalForward } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
-import commander, { Command } from 'commander';
+import { Command } from 'commander';
 
 {
-    function myParseInt(value, dummyPrevious) {
-        // parseInt takes a string and a radix
-        const parsedValue = parseInt(value, 10);
-        if (isNaN(parsedValue)) {
-            throw new commander.InvalidArgumentError('Not a number.');
-        }
-        return parsedValue;
-    }
-
     const clientProgram = new Command();
     clientProgram
         .name('client')
         .option('-c, --config <file path>', 'config file', 'client.json')
-        // .option('-a, --address <string>', `server's address`, '127.0.0.1')
-        // .option('-p, --port <number>', `server's port`, myParseInt, 7666)
         .action(async (options, command) => {
             console.log('run as client')
 
@@ -64,7 +53,6 @@ import commander, { Command } from 'commander';
     serverProgram
         .name('server')
         .option('-c, --config <file path>', 'config file', 'server.json')
-        // .option('-p, --port <number>', `server's listen port`, myParseInt, 7666)
         .action(async (options, command) => {
             console.log('run as server')
 

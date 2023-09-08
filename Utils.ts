@@ -1,5 +1,5 @@
 
-export function hashCode(strKey) {
+export function hashCode(strKey: string) {
     var hash = 0;
     if (strKey != null) {
         for (var i = 0; i < strKey.length; i++) {

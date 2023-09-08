@@ -1,5 +1,7 @@
 /node_modules
+/.vscode
 *.ts
 *.js.map
 client.json
 server.json
+tsconfig.json

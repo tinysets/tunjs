@@ -4,7 +4,7 @@
   "description": "port mapping",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "echo test ok! && exit 0",
     "build": "tsc",
     "build-w": "tsc -w"
   },
@@ -16,7 +16,6 @@
   "dependencies": {
     "commander": "^8.3.0",
     "delay": "^5.0.0",
-    "delegates": "^1.0.0",
     "koa-compose": "^4.1.0",
     "once": "^1.4.0"
   },

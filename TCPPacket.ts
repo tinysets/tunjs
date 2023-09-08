@@ -8,15 +8,6 @@ export enum CMD {
     TCP_Connected,
     TCP_Data,
     TCP_Closed,
-
-
-    S2C_TCP_Connected,
-    S2C_TCP_Closed,
-    S2C_TCP_Data,
-
-    C2S_TCP_Closed,
-    C2S_TCP_Data,
-
 }
 
 

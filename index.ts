@@ -536,11 +536,11 @@ let testRemoteForwardSpeed = async () => {
 
 
 let main = async () => {
-    testTCPServer();
+    // testTCPServer();
     // testTCPLocalForward();
     // testTCPLocalForwardSpeed()
     // await testTCPPing()
-    // testTCPRemotePortMapping()
+    testTCPRemotePortMapping()
 
     // testUDPServer();
     // testUDPLocalForward();

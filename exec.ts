@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import fs from 'fs';
 import delay from 'delay';
 import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';

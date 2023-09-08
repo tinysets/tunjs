@@ -9,7 +9,7 @@
     "build-w": "tsc -w"
   },
   "bin": {
-    "portmp": "./exec.js"
+    "portmp": "./src/exec.js"
   },
   "author": "",
   "license": "ISC",

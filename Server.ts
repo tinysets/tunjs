@@ -3,7 +3,7 @@ import { TCPServer, TCPSession, TCPOptions } from "./TCPSocket";
 import { PortMapping, PortMappingManager } from './Client';
 
 
-export let startServer = async (port = 7666) => {
+export let startServer = async (port = 7666, validKeys: string[] = []) => {
 
     let mappingManager = new PortMappingManager()
 
@@ -13,19 +13,36 @@ export let startServer = async (port = 7666) => {
     tcpServer.setServer(port);
 
     tcpServer.on("newConnect", (tcpSession: TCPSession) => {
-        tcpSession.on('ready', () => {
-            let packet = new TCPPacket()
-            packet.Cmd = CMD.Hello
-            tcpSession.writePacket(packet);
-        })
         tcpSession.on('close', () => {
             mappingManager.close(tcpSession)
         })
 
         tcpSession.on('packet', (packet: TCPPacket) => {
             if (packet.Cmd == CMD.Hello) {
-                tcpSession.writePacket(packet);
-            } else if (packet.Cmd == CMD.New_PortMapping) {
+                if (validKeys.length > 0) {
+                    let hello = packet.GetJsonData()
+                    if (hello && hello.authKey) {
+                        if (validKeys.includes(hello.authKey)) {
+                            tcpSession.isAuthed = true
+                        } else {
+                            tcpSession.isAuthed = false
+                        }
+                    }
+                } else {
+                    tcpSession.isAuthed = true
+                }
+                let resPacket = new TCPPacket();
+                resPacket.Cmd = CMD.Hello;
+                resPacket.SetJsonData({ isAuthed: tcpSession.isAuthed })
+                tcpSession.writePacket(resPacket);
+            }
+
+            if (!tcpSession.isAuthed) {
+                tcpSession.close()
+                return
+            }
+
+            if (packet.Cmd == CMD.New_PortMapping) {
                 let forwardInfos: ForwardInfo[] = packet.GetJsonData();
                 forwardInfos = forwardInfos.map((v) => ForwardInfo.From(v))
                 let isServer = true;

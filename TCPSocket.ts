@@ -96,6 +96,8 @@ export interface TCPPacketable {
 }
 
 export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
+    isAuthed = false
+
     isReady: boolean = true;
     isClosed: boolean = false;
 
@@ -220,6 +222,8 @@ export class TCPSession extends Emitter implements EndPoint, TCPPacketable {
 
 
 export class TCPClient extends Emitter implements EndPoint, TCPPacketable {
+    isAuthed = false
+
     isReady: boolean = false;
     isClosed: boolean = false;
 

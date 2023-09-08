@@ -329,7 +329,7 @@ export class PortMappingManager {
     }
 }
 
-export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, remoteAddr = '127.0.0.1') => {
+export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, remoteAddr = '127.0.0.1', authKey = '') => {
 
     let mappingManager = new PortMappingManager()
 
@@ -342,6 +342,7 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
         tcpClient.on('ready', () => {
             let packet = new TCPPacket()
             packet.Cmd = CMD.Hello
+            packet.SetJsonData({ authKey: authKey })
             tcpClient.writePacket(packet);
         })
         tcpClient.on('close', () => {
@@ -350,16 +351,31 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
 
         tcpClient.on('packet', (packet: TCPPacket) => {
             if (packet.Cmd == CMD.Hello) {
-                let packet = new TCPPacket()
-                packet.Cmd = CMD.New_PortMapping
-                packet.SetJsonData(forwardInfos)
-                tcpClient.writePacket(packet);
-                let isServer = false;
-                for (const forwardInfo of forwardInfos) {
-                    let portMapping = new PortMapping(isServer, tcpClient, forwardInfo)
-                    mappingManager.newPortMapping(tcpClient, forwardInfo.mappingId, portMapping)
+                let hello = packet.GetJsonData()
+                if (hello && hello.isAuthed) {
+                    tcpClient.isAuthed = true
+                } else {
+                    tcpClient.isAuthed = false
                 }
-            } else if (packet.Cmd == CMD.New_PortMapping) {
+                if (tcpClient.isAuthed) {
+                    let packet = new TCPPacket()
+                    packet.Cmd = CMD.New_PortMapping
+                    packet.SetJsonData(forwardInfos)
+                    tcpClient.writePacket(packet);
+                    let isServer = false;
+                    for (const forwardInfo of forwardInfos) {
+                        let portMapping = new PortMapping(isServer, tcpClient, forwardInfo)
+                        mappingManager.newPortMapping(tcpClient, forwardInfo.mappingId, portMapping)
+                    }
+                }
+            }
+
+            if (!tcpClient.isAuthed) {
+                tcpClient.close()
+                return;
+            }
+
+            if (packet.Cmd == CMD.New_PortMapping) {
                 let succs: number[] = packet.GetJsonData();
             } else if (packet.Cmd == CMD.TCP_Connected) {
                 let dataPacket = new TCPDataPacket();

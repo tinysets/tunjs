@@ -30,6 +30,7 @@ import commander, { Command } from 'commander';
                 let defualtConfig = {
                     address: '127.0.0.1',
                     port: 7666,
+                    authKey: 'userkey1',
                     forwardInfos: [
                         { note: 'for test', isLocalForward: true, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 46464, fromPort: 56565 },
                         { note: 'for test', isLocalForward: false, type: 'udp', targetAddr: '127.0.0.1', targetPort: 46464, fromPort: 56565 },
@@ -55,7 +56,7 @@ import commander, { Command } from 'commander';
                 }
             }
 
-            await startClient(remoteForwards, config.port, config.address)
+            await startClient(remoteForwards, config.port, config.address, config.authKey)
         })
 
     const serverProgram = new Command();
@@ -69,12 +70,16 @@ import commander, { Command } from 'commander';
             if (!fs.existsSync(options.config)) {
                 let defualtConfig = {
                     port: 7666,
+                    validKeys: [
+                        'userkey1',
+                        'userkey2',
+                    ]
                 }
                 fs.writeFileSync('server.json', JSON.stringify(defualtConfig, null, 2), 'utf8')
             }
             let str = fs.readFileSync(options.config, 'utf8')
             let config = JSON.parse(str);
-            await startServer(config.port)
+            await startServer(config.port, config.validKeys)
         })
 
     const mainProgram = new Command();

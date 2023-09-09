@@ -9,7 +9,8 @@
     "dev": "tsc -w",
     "tsc": "tsc",
     "tsc:types": "tsc -p tsconfig.types.json",
-    "build": "npm run tsc && npm run tsc:types && rollup -c ./rollup.config.mjs",
+    "bundle": "rollup -c ./rollup.config.mjs",
+    "build": "npm run tsc && npm run tsc:types && npm run bundle",
     "clean": "rimraf src/**/*.js src/**/*.js.map dist bin",
     "b": "npm run build",
     "c": "npm run clean"
@@ -40,6 +41,7 @@
     "@types/node": "^20.5.9",
     "rimraf": "^3.0.2",
     "rollup": "^3.20.7",
+    "rollup-plugin-header": "^0.0.2",
     "typescript": "^5.2.2"
   }
 }

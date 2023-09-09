@@ -85,7 +85,7 @@ class Tester {
     }
 
     static async TCPPacketServer(port: number) {
-       let s =  process.hrtime()
+        let s = process.hrtime()
         let options = new TCPOptions()
         options.usePacket = true
         let tcpServer = new TCPServer(options)
@@ -535,6 +535,7 @@ let testRemoteForwardSpeed = async () => {
 
 }
 
+import header from 'rollup-plugin-header'
 
 let main = async () => {
     // testTCPServer();
@@ -551,4 +552,5 @@ let main = async () => {
     // testRemoteForwardSpeed()
 }
 
+let he = header
 main();

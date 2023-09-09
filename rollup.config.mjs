@@ -1,5 +1,6 @@
 import resolve from "@rollup/plugin-node-resolve";
 import commonjs from "@rollup/plugin-commonjs";
+import { header } from 'rollup-plugin-header'
 
 export default [
 	{
@@ -39,6 +40,7 @@ export default [
 		plugins: [
 			resolve(),
 			commonjs(),
+			header({ 'header': '#!/usr/bin/env node\n' })
 		],
 		input: 'src/cli.js',
 		context: 'this',

@@ -1,5 +1,3 @@
-// #!/usr/bin/env node
-
 import fs from 'fs';
 import { ForwardInfo } from './TCPPacket';
 import { UDPLocalForward } from './UDPSocket';

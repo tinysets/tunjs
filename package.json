@@ -3,13 +3,17 @@
   "version": "1.0.0",
   "description": "port mapping",
   "main": "index.js",
+  "types": "./types/index.d.ts",
+  "typings": "./types/index.d.ts",
   "scripts": {
     "test": "echo test ok! && exit 0",
     "build": "tsc",
-    "build-w": "tsc -w"
+    "build:w": "tsc -w",
+    "build:types": "tsc -p tsconfig.types.json",
+    "clean": "rimraf src/**/*.js src/**/*.js.map && rimraf index.js index.js.map cli.js cli.js.map test.js test.js.map"
   },
   "bin": {
-    "portmp": "./src/exec.js"
+    "portmp": "./cli.js"
   },
   "author": "",
   "license": "ISC",
@@ -21,6 +25,7 @@
   },
   "devDependencies": {
     "@types/node": "^20.5.9",
+    "rimraf": "^3.0.2",
     "typescript": "^5.2.2"
   }
 }

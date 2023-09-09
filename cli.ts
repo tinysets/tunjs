@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 import fs from 'fs';
-import { ForwardInfo } from './TCPPacket';
-import { UDPLocalForward } from './UDPSocket';
-import { TCPLocalForward } from "./TCPSocket";
-import { startServer } from './Server';
-import { startClient } from './Client';
+import { ForwardInfo } from './src/TCPPacket';
+import { UDPLocalForward } from './src/UDPSocket';
+import { TCPLocalForward } from "./src/TCPSocket";
+import { startServer } from './src/Server';
+import { startClient } from './src/Client';
 import { Command } from 'commander';
 
 {

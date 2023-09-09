@@ -7,11 +7,11 @@
         {
             "type": "node",
             "request": "launch",
-            "name": "Launch Tester",
+            "name": "Launch Test",
             "skipFiles": [
                 "<node_internals>/**"
             ],
-            "program": "${workspaceFolder}\\Tester.js",
+            "program": "${workspaceFolder}\\test.js",
             "outFiles": [
                 "${workspaceFolder}/**/*.js"
             ]

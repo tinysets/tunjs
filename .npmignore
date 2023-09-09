@@ -1,7 +1,11 @@
-/node_modules
 /.vscode
+/node_modules
 *.ts
 *.js.map
+.gitignore
+
 client.json
 server.json
+
 tsconfig.json
+tsconfig.types.json

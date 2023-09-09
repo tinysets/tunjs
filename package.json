@@ -1,6 +1,6 @@
 {
   "name": "portmp",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "port mapping",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

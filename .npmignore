@@ -1,11 +1,13 @@
-/.vscode
-/node_modules
-*.ts
-*.js.map
-.gitignore
+# /.vscode
+# /node_modules
+# /src
+# *.ts
+# *.js.map
+# .gitignore
 
-client.json
-server.json
+# client.json
+# server.json
 
-tsconfig.json
-tsconfig.types.json
+# tsconfig.json
+# tsconfig.types.json
+# rollup.config.mjs

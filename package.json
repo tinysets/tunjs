@@ -2,21 +2,32 @@
   "name": "portmp",
   "version": "1.0.0",
   "description": "port mapping",
-  "main": "index.js",
-  "types": "./types/index.d.ts",
-  "typings": "./types/index.d.ts",
+  "main": "./dist/index.cjs.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "test": "echo test ok! && exit 0",
-    "build": "tsc",
-    "build:w": "tsc -w",
-    "build:types": "tsc -p tsconfig.types.json",
-    "clean": "rimraf src/**/*.js src/**/*.js.map && rimraf index.js index.js.map cli.js cli.js.map test.js test.js.map"
+    "dev": "tsc -w",
+    "tsc": "tsc",
+    "tsc:types": "tsc -p tsconfig.types.json",
+    "build": "npm run tsc && npm run tsc:types && rollup -c ./rollup.config.mjs",
+    "clean": "rimraf src/**/*.js src/**/*.js.map dist bin",
+    "b": "npm run build",
+    "c": "npm run clean"
   },
   "bin": {
-    "portmp": "./cli.js"
+    "portmp": "./bin/cli.js"
   },
+  "files": [
+    "bin",
+    "dist"
+  ],
   "author": "",
   "license": "ISC",
+  "homepage": "https://github.com/tinysets/portmp",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tinysets/portmp.git"
+  },
   "dependencies": {
     "commander": "^8.3.0",
     "delay": "^5.0.0",
@@ -24,8 +35,11 @@
     "once": "^1.4.0"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^25.0.4",
+    "@rollup/plugin-node-resolve": "^15.2.1",
     "@types/node": "^20.5.9",
     "rimraf": "^3.0.2",
+    "rollup": "^3.20.7",
     "typescript": "^5.2.2"
   }
 }

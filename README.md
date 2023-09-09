@@ -6,33 +6,35 @@
 
 # portmp -> port mapping
 
-[![Node.js Package][npm-package-image]][npm-package-url]
+<!-- [![Node.js Package][npm-package-image]][npm-package-url] -->
 [![npm version][npm-image]][npm-url]
 
 
 ## Introduction
-
-port mapping, local port forward,remote port forward, NAT, TCP, UDP
+- port mapping
+- A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet.
+- Support TCP & UDP.
+- local port forward, remote port forward.
 
 ## Usage
 
 Install the plugin with NPM:
 
 ```
-npm install -g portmp
+$ npm install -g portmp
 then
-portmp -h
+$ portmp -h
 ```
 
 #### As Server
 ```
-portmp server
+$ portmp server
 will gen a server.json in your `pwd`
 ```
 
 #### As Client
 ```
-portmp client
+$ portmp client
 will gen a client.json in your `pwd`
 ```
 

@@ -1,7 +1,7 @@
 {
   "name": "portmp",
   "version": "0.0.6",
-  "description": "port mapping",
+  "description": "port mapping. A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet. support TCP & UDP",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -29,6 +29,14 @@
     "type": "git",
     "url": "https://github.com/tinysets/portmp.git"
   },
+  "keywords": [
+    "port mapping",
+    "port forward",
+    "reverse proxy",
+    "NAT",
+    "TCP",
+    "UDP"
+  ],
   "dependencies": {
     "commander": "^8.3.0",
     "delay": "^5.0.0",

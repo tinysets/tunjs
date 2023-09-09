@@ -16,8 +16,8 @@ jobs:
         with:
           node-version: 16
       - run: npm ci
-      - run: npm c
-      - run: npm b
+      - run: npm run c
+      - run: npm run b
 
   publish-npm:
     needs: build

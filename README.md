@@ -35,3 +35,41 @@ will gen a server.json in your `pwd`
 portmp client
 will gen a client.json in your `pwd`
 ```
+
+#### Config File:
+```json
+// server.json
+{
+  "port": 7666,
+  "validKeys": [
+    "userkey1",
+    "userkey2"
+  ]
+}
+```
+```json
+// client.json
+{
+  "address": "127.0.0.1",
+  "port": 7666,
+  "authKey": "userkey1",
+  "forwardInfos": [
+    {
+      "note": "for test",
+      "isLocalForward": true,
+      "type": "tcp",
+      "targetAddr": "127.0.0.1",
+      "targetPort": 46464,
+      "fromPort": 56565
+    },
+    {
+      "note": "for test",
+      "isLocalForward": false,
+      "type": "udp",
+      "targetAddr": "127.0.0.1",
+      "targetPort": 46464,
+      "fromPort": 56565
+    }
+  ]
+}
+```

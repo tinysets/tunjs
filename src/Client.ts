@@ -72,7 +72,7 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
 
         let intervalTimer = setInterval(() => {
             let packet = new TCPPacket()
-            packet.Cmd = CMD.Ping
+            packet.Cmd = CMD.Heartbeat
             packet.SetJsonData({ authKey: authKey })
             tcpClient.writePacket(packet);
         }, 1000)

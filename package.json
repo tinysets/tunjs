@@ -1,6 +1,6 @@
 {
   "name": "portmp",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "description": "port mapping. A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet. support TCP & UDP",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

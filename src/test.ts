@@ -537,9 +537,9 @@ let testRemoteForwardSpeed = async () => {
 import header from 'rollup-plugin-header'
 import { TCPOptions, TCPServer, TCPSession } from './Socket/TCPServer';
 import { TCPClient } from './Socket/TCPClient';
-import { ForwardInfo } from './ForwardInfo';
 import { CMD } from './Common/CMD';
 import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
+import { ForwardInfo } from './Common/ForwardInfo';
 
 
 let main = async () => {

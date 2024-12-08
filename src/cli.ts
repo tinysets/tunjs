@@ -2,8 +2,8 @@ import fs from 'fs';
 import { startServer } from './Server';
 import { startClient } from './Client';
 import { Command } from 'commander';
-import { ForwardInfo } from './ForwardInfo';
 import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
+import { ForwardInfo } from './Common/ForwardInfo';
 
 {
     const clientProgram = new Command();

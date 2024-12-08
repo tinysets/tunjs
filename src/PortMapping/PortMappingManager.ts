@@ -5,9 +5,9 @@ import { TCPClient } from '../Socket/TCPClient'
 import { CMD } from '../Common/CMD'
 import { TCPDataPacket, TCPPacket } from '../Common/TCPPacket'
 import { UDPClient, UDPServer, UDPSession } from '../Socket/UDPSocket'
-import { ForwardInfo } from '../ForwardInfo'
 import { TCPTunnleWrapper } from './TCPTunnleWrapper'
 import { EndPoint, TCPPacketable } from '../Common/interfaces'
+import { ForwardInfo } from '../Common/ForwardInfo'
 
 export class UID {
     private static uid = 1

@@ -2,7 +2,7 @@ import { TCPPacket, TCPDataPacket } from './Common/TCPPacket';
 import { TCPServer, TCPSession, TCPOptions } from "./Socket/TCPServer";
 import { PortMapping, PortMappingManager } from './PortMapping/PortMappingManager';
 import { CMD } from './Common/CMD';
-import { ForwardInfo } from './ForwardInfo';
+import { ForwardInfo } from './Common/ForwardInfo';
 
 export let startServer = async (port = 7666, validKeys: string[] = []) => {
 

@@ -3,7 +3,7 @@ import { TCPDataPacket, TCPPacket } from './Common/TCPPacket';
 import { TCPOptions } from './Socket/TCPServer';
 import { TCPClient } from './Socket/TCPClient';
 import { PortMapping, PortMappingManager } from './PortMapping/PortMappingManager';
-import { ForwardInfo } from './ForwardInfo';
+import { ForwardInfo } from './Common/ForwardInfo';
 
 
 export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, remoteAddr = '127.0.0.1', authKey = '') => {

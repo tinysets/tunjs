@@ -1,7 +1,8 @@
 import dgram, { RemoteInfo } from 'dgram'
 import delay from 'delay';
-import { TCPPacket } from './Common/TCPPacket';
-import { UDPServer, UDPSession, UDPClient } from './Socket/UDPSocket';
+import { CMD, ForwardInfo, TCPPacket } from './TCPPacket';
+import { UDPServer, UDPSession, UDPClient, UDPLocalForward } from './UDPSocket';
+import { TCPServer, TCPSession, TCPClient, TCPOptions, TCPLocalForward } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
 
@@ -535,12 +536,6 @@ let testRemoteForwardSpeed = async () => {
 }
 
 import header from 'rollup-plugin-header'
-import { TCPOptions, TCPServer, TCPSession } from './Socket/TCPServer';
-import { TCPClient } from './Socket/TCPClient';
-import { ForwardInfo } from './ForwardInfo';
-import { CMD } from './Common/CMD';
-import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
-
 
 let main = async () => {
     // testTCPServer();

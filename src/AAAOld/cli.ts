@@ -1,9 +1,10 @@
 import fs from 'fs';
+import { ForwardInfo } from './TCPPacket';
+import { UDPLocalForward } from './UDPSocket';
+import { TCPLocalForward } from "./TCPSocket";
 import { startServer } from './Server';
 import { startClient } from './Client';
 import { Command } from 'commander';
-import { ForwardInfo } from './ForwardInfo';
-import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
 
 {
     const clientProgram = new Command();

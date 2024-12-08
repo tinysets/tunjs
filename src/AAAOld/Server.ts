@@ -1,19 +1,21 @@
-import { TCPPacket, TCPDataPacket } from './Common/TCPPacket';
-import { TCPServer, TCPSession, TCPOptions } from "./Socket/TCPServer";
-import { PortMapping, PortMappingManager } from './PortMapping/PortMappingManager';
-import { CMD } from './Common/CMD';
-import { ForwardInfo } from './ForwardInfo';
+import { CMD, ForwardInfo, TCPPacket, TCPDataPacket } from './TCPPacket';
+import { TCPServer, TCPSession, TCPOptions } from "./TCPSocket";
+import { PortMapping, PortMappingManager } from './Client';
+
 
 export let startServer = async (port = 7666, validKeys: string[] = []) => {
 
     let mappingManager = new PortMappingManager()
 
-    let options = new TCPOptions();
+    let options = new TCPOptions()
     options.usePacket = true;
     let tcpServer = new TCPServer(options);
     tcpServer.setServer(port);
 
     tcpServer.on("newConnect", (tcpSession: TCPSession) => {
+        tcpSession.on('close', () => {
+            mappingManager.close(tcpSession)
+        })
 
         tcpSession.on('packet', (packet: TCPPacket) => {
             if (packet.Cmd == CMD.Hello) {
@@ -33,7 +35,6 @@ export let startServer = async (port = 7666, validKeys: string[] = []) => {
                 resPacket.Cmd = CMD.Hello;
                 resPacket.SetJsonData({ isAuthed: tcpSession.isAuthed })
                 tcpSession.writePacket(resPacket);
-
             }
 
             if (!tcpSession.isAuthed) {
@@ -58,11 +59,7 @@ export let startServer = async (port = 7666, validKeys: string[] = []) => {
                 dataPacket.UnSerialize(packet.Data)
                 mappingManager.onRecvTunnleData(tcpSession, dataPacket.mappingId, dataPacket.pipeId, dataPacket.buffer)
             }
-        });
-
-        tcpSession.on('close', () => {
-            mappingManager.close(tcpSession)
-        });
+        })
     });
 
     return await tcpServer.start()

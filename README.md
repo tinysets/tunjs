@@ -1,10 +1,10 @@
-[npm-image]: https://img.shields.io/npm/v/portmp.svg
-[npm-url]: https://www.npmjs.com/package/portmp
+[npm-image]: https://img.shields.io/npm/v/tunjs.svg
+[npm-url]: https://www.npmjs.com/package/tunjs
 
-[npm-package-image]: https://github.com/tinysets/portmp/actions/workflows/npm-publish.yml/badge.svg
-[npm-package-url]: https://github.com/tinysets/portmp/actions/workflows/npm-publish.yml
+[npm-package-image]: https://github.com/tinysets/tunjs/actions/workflows/npm-publish.yml/badge.svg
+[npm-package-url]: https://github.com/tinysets/tunjs/actions/workflows/npm-publish.yml
 
-# portmp -> port mapping
+# tunjs -> tunnel js
 
 <!-- [![Node.js Package][npm-package-image]][npm-package-url] -->
 [![npm version][npm-image]][npm-url]
@@ -22,20 +22,20 @@
 Install the plugin with NPM:
 
 ```
-$ npm install -g portmp
+$ npm install -g tunjs
 then
-$ portmp -h
+$ tunjs -h
 ```
 
 #### As Server
 ```
-$ portmp server
+$ tunjs server
 will gen a server.json in your `pwd`
 ```
 
 #### As Client
 ```
-$ portmp client
+$ tunjs client
 will gen a client.json in your `pwd`
 ```
 

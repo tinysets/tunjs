@@ -21,4 +21,4 @@ jobs:
       - run: npm run b
       - run: npm publish
         env:
-          NODE_AUTH_TOKEN: ${{secrets.PORTMP_PUBLISH_KEY}}
+          NODE_AUTH_TOKEN: ${{secrets.TUNJS_PUBLISH_KEY}}

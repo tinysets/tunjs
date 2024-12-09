@@ -30,7 +30,7 @@ export default [
 			// },
 			// {
 			// 	file: 'dist/index.umd.js',
-			// 	name: 'portmp',
+			// 	name: 'tunjs',
 			// 	format: 'umd',
 			// 	exports: 'named',
 			// },

@@ -76,7 +76,7 @@ import { TunnelInfo } from './Common/TunnelInfo';
 
     const mainProgram = new Command();
     mainProgram
-        .name('portmp')
+        .name('tunjs')
         .addCommand(clientProgram,
             { isDefault: true }
         )

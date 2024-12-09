@@ -1,7 +1,7 @@
 {
-  "name": "portmp",
-  "version": "0.0.7",
-  "description": "port mapping. A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet. support TCP & UDP",
+  "name": "tunjs",
+  "version": "1.0.0",
+  "description": "tunnel. A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet. support TCP & UDP",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
@@ -16,7 +16,7 @@
     "c": "npm run clean"
   },
   "bin": {
-    "portmp": "./bin/cli.js"
+    "tunjs": "./bin/cli.js"
   },
   "files": [
     "bin",
@@ -24,13 +24,13 @@
   ],
   "author": "",
   "license": "ISC",
-  "homepage": "https://github.com/tinysets/portmp",
+  "homepage": "https://github.com/tinysets/tunjs",
   "repository": {
     "type": "git",
-    "url": "https://github.com/tinysets/portmp.git"
+    "url": "https://github.com/tinysets/tunjs.git"
   },
   "keywords": [
-    "port mapping",
+    "tunnel",
     "port forward",
     "reverse proxy",
     "NAT",

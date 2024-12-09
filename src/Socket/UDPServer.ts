@@ -71,10 +71,12 @@ export class UDPServer extends Emitter {
             this.socket.send(buffer, port, address);
     }
     close() {
-        if (!this.socket) {
+        if (this.socket) {
             let socket = this.socket;
             this.socket = null;
-            socket.close()
+            socket.close(()=>{
+                console.log(`udp server ${this.port} closed!`)
+            })
             this.sessionManager.stopCheck();
             this.emit('close')
         }

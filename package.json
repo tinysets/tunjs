@@ -1,6 +1,6 @@
 {
   "name": "tunjs",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "tunnel. A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet. support TCP & UDP",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

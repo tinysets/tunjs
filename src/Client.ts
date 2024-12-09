@@ -80,7 +80,6 @@ export let startClient = async (tunnelInfos: TunnelInfo[], remotePort = 7666, re
         tcpClient.on('close', () => {
             clearInterval(intervalTimer)
         });
+        return tcpClient;
     }
-
-    return succ;
 }

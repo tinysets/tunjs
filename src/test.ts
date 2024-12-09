@@ -534,6 +534,19 @@ let testRemoteTunnelSpeed = async () => {
 
 }
 
+
+let testRemoteTunnelUDPCantClose = async () => {
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, sourcePort: 9999 }),
+    ];
+
+    await startServer()
+    let client = await startClient(tunnelInfos, 7666, '127.0.0.1')
+
+    await delay(1000)
+    client.close()
+}
+
 import header from 'rollup-plugin-header'
 import { TCPOptions, TCPServer, TCPSession } from './Socket/TCPServer';
 import { TCPClient } from './Socket/TCPClient';
@@ -548,7 +561,7 @@ let main = async () => {
     // testTCPLocalTunnel();
     // testTCPLocalTunnelSpeed()
     // await testTCPPing()
-    testTCPRemoteTunnel()
+    // testTCPRemoteTunnel()
 
     // testUDPServer();
     // testUDPLocalTunnel();
@@ -556,6 +569,8 @@ let main = async () => {
     // await testUDPPing()
     // testUDPRemoteTunnel()
     // testRemoteTunnelSpeed()
+
+    testRemoteTunnelUDPCantClose()
 }
 
 let he = header

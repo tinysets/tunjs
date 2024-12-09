@@ -56,6 +56,7 @@ export class TCPServer extends Emitter {
             let server = this.server;
             this.server = null;
             server.close()
+            console.log(`tcp server ${this.port} closed!`)
         }
     }
 

@@ -33,7 +33,7 @@ export class Pipe extends Emitter {
     private left: EndPoint
     private right: EndPoint
 
-    tunnleWrapper: EndPoint
+    virtualEndPoint: EndPoint
     constructor(left: EndPoint, right: EndPoint) {
         super()
         this.left = left;
@@ -133,7 +133,7 @@ export class Pipe extends Emitter {
     }
 
     public onReceiveTunnleData(buffer: Buffer) {
-        let tunnleWrapper = this.tunnleWrapper;
-        tunnleWrapper.onReceiveData(buffer)
+        let virtualEndPoint = this.virtualEndPoint;
+        virtualEndPoint.onReceiveData(buffer)
     }
 }

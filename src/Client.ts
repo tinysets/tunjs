@@ -1,14 +1,14 @@
-import { CMD } from './Common/CMD';
+import { Msg } from './Common/Msg';
 import { TCPDataPacket, TCPPacket } from './Common/TCPPacket';
 import { TCPOptions } from './Socket/TCPServer';
 import { TCPClient } from './Socket/TCPClient';
-import { PortMapping, PortMappingManager } from './PortMapping/PortMappingManager';
-import { ForwardInfo } from './Common/ForwardInfo';
+import { Tunnel, TunnelManager } from './Tunnel/TunnelManager';
+import { TunnelInfo } from './Common/TunnelInfo';
 
 
-export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, remoteAddr = '127.0.0.1', authKey = '') => {
+export let startClient = async (tunnelInfos: TunnelInfo[], remotePort = 7666, remoteAddr = '127.0.0.1', authKey = '') => {
 
-    let mappingManager = new PortMappingManager()
+    let tunnelManager = new TunnelManager()
 
     let options = new TCPOptions()
     options.usePacket = true;
@@ -17,11 +17,11 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
 
     {
         tcpClient.on('close', () => {
-            mappingManager.close(tcpClient)
+            tunnelManager.close(tcpClient)
         })
 
         tcpClient.on('packet', (packet: TCPPacket) => {
-            if (packet.Cmd == CMD.Hello) {
+            if (packet.Cmd == Msg.Hello) {
                 let hello = packet.GetJsonData()
                 if (hello && hello.isAuthed) {
                     tcpClient.isAuthed = true
@@ -30,13 +30,13 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
                 }
                 if (tcpClient.isAuthed) {
                     let packet = new TCPPacket()
-                    packet.Cmd = CMD.New_PortMapping
-                    packet.SetJsonData(forwardInfos)
+                    packet.Cmd = Msg.New_Tunnel
+                    packet.SetJsonData(tunnelInfos)
                     tcpClient.writePacket(packet);
                     let isServer = false;
-                    for (const forwardInfo of forwardInfos) {
-                        let portMapping = new PortMapping(isServer, tcpClient, forwardInfo)
-                        mappingManager.newPortMapping(tcpClient, forwardInfo.mappingId, portMapping)
+                    for (const tunnelInfo of tunnelInfos) {
+                        let tunnel = new Tunnel(isServer, tcpClient, tunnelInfo)
+                        tunnelManager.newTunnel(tcpClient, tunnelInfo.tunnelId, tunnel)
                     }
                 }
             }
@@ -46,33 +46,33 @@ export let startClient = async (forwardInfos: ForwardInfo[], remotePort = 7666, 
                 return;
             }
 
-            if (packet.Cmd == CMD.New_PortMapping) {
+            if (packet.Cmd == Msg.New_Tunnel) {
                 let succs: number[] = packet.GetJsonData();
-            } else if (packet.Cmd == CMD.TCP_Connected) {
+            } else if (packet.Cmd == Msg.TCP_Connected) {
                 let dataPacket = new TCPDataPacket();
                 dataPacket.UnSerialize(packet.Data)
-                mappingManager.onRecvTunnleConnect(tcpClient, dataPacket.mappingId, dataPacket.pipeId)
-            } else if (packet.Cmd == CMD.TCP_Closed) {
+                tunnelManager.onRecvTunnleConnect(tcpClient, dataPacket.tunnelId, dataPacket.pipeId)
+            } else if (packet.Cmd == Msg.TCP_Closed) {
                 let dataPacket = new TCPDataPacket();
                 dataPacket.UnSerialize(packet.Data)
-                mappingManager.onRecvTunnleClose(tcpClient, dataPacket.mappingId, dataPacket.pipeId)
-            } else if (packet.Cmd == CMD.TCP_Data) {
+                tunnelManager.onRecvTunnleClose(tcpClient, dataPacket.tunnelId, dataPacket.pipeId)
+            } else if (packet.Cmd == Msg.TCP_Data) {
                 let dataPacket = new TCPDataPacket();
                 dataPacket.UnSerialize(packet.Data)
-                mappingManager.onRecvTunnleData(tcpClient, dataPacket.mappingId, dataPacket.pipeId, dataPacket.buffer)
+                tunnelManager.onRecvTunnleData(tcpClient, dataPacket.tunnelId, dataPacket.pipeId, dataPacket.buffer)
             }
         })
     }
     let succ = await tcpClient.start();
     if (succ) {
         let packet = new TCPPacket()
-        packet.Cmd = CMD.Hello
+        packet.Cmd = Msg.Hello
         packet.SetJsonData({ authKey: authKey })
         tcpClient.writePacket(packet);
 
         let intervalTimer = setInterval(() => {
             let packet = new TCPPacket()
-            packet.Cmd = CMD.Heartbeat
+            packet.Cmd = Msg.Heartbeat
             packet.SetJsonData({ authKey: authKey })
             tcpClient.writePacket(packet);
         }, 1000)

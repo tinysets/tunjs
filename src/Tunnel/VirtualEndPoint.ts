@@ -1,58 +1,58 @@
 import Emitter from 'events'
-import { CMD } from "../Common/CMD";
+import { Msg } from "../Common/Msg";
 import { TCPDataPacket, TCPPacket } from "../Common/TCPPacket";
 import { EndPoint, TCPPacketable } from '../Common/interfaces';
 
-export class TCPTunnleWrapper extends Emitter implements EndPoint {
-    private packetable: TCPPacketable;
-    private mappingId: number;
+export class VirtualEndPoint extends Emitter implements EndPoint {
+    private node: TCPPacketable;
+    private tunnelId: number;
     private pipeId: number;
 
-    constructor(packetable: TCPPacketable, mappingId: number, pipeId: number) {
+    constructor(node: TCPPacketable, tunnelId: number, pipeId: number) {
         super()
-        this.packetable = packetable;
-        this.mappingId = mappingId;
+        this.node = node;
+        this.tunnelId = tunnelId;
         this.pipeId = pipeId;
     }
 
     onReceiveData(buffer: Buffer): void {
-        if (this.packetable) {
+        if (this.node) {
             this.emit('data', buffer)
         }
     }
 
     write(buffer: string | Uint8Array): void {
-        if (buffer && this.packetable) {
+        if (buffer && this.node) {
             if (typeof buffer === 'string') {
                 buffer = Buffer.from(buffer)
             }
             let packet = new TCPPacket()
-            packet.Cmd = CMD.TCP_Data
+            packet.Cmd = Msg.TCP_Data
             let dataPacket = new TCPDataPacket()
-            dataPacket.mappingId = this.mappingId;
+            dataPacket.tunnelId = this.tunnelId;
             dataPacket.pipeId = this.pipeId;
             dataPacket.buffer = buffer as Buffer
             packet.Data = dataPacket.Serialize()
-            this.packetable.writePacket(packet)
+            this.node.writePacket(packet)
         }
     }
 
     close(): void {
-        if (this.packetable) {
-            let packetable = this.packetable;
-            this.packetable = null;
+        if (this.node) {
+            let packetable = this.node;
+            this.node = null;
             this.emitCloseEvent(packetable)
         }
     }
 
-    private emitCloseEvent(packetable: TCPPacketable) {
+    private emitCloseEvent(node: TCPPacketable) {
         let packet = new TCPPacket()
-        packet.Cmd = CMD.TCP_Closed
+        packet.Cmd = Msg.TCP_Closed
         let dataPacket = new TCPDataPacket()
-        dataPacket.mappingId = this.mappingId
+        dataPacket.tunnelId = this.tunnelId
         dataPacket.pipeId = this.pipeId
         packet.Data = dataPacket.Serialize()
-        packetable.writePacket(packet)
+        node.writePacket(packet)
         this.emit('close')
     }
 
@@ -60,10 +60,9 @@ export class TCPTunnleWrapper extends Emitter implements EndPoint {
         return true
     }
 
-    on(...args: [event: string, listener: (...args: any[]) => void] |
-    [event: 'close', listener: () => void] |
-    [event: 'data', listener: (buffer: Buffer) => void]
-    ): this {
+    on(event: 'close', listener: () => void): this;
+    on(event: 'data', listener: (data: Buffer) => void): this;
+    on(...args): this {
         super.on.call(this, ...args)
         return this
     }

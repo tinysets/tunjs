@@ -1,12 +1,13 @@
 import { hashCode } from "./Utils"
 
-export class ForwardInfo {
-    mappingId: number = 0
-    isLocalForward = false
+export class TunnelInfo {
+    tunnelId: number = 0
+    isLocalTunnel = false
     type: 'tcp' | 'udp'
     targetAddr: string
     targetPort: number
-    fromPort: number
+    sourcePort: number
+    timeout = 0
 
     constructor(jsonObj?) {
         this.from(jsonObj)
@@ -14,12 +15,11 @@ export class ForwardInfo {
     from(jsonObj) {
         if (jsonObj) {
             Object.assign(this, jsonObj)
-            this.mappingId = hashCode(this.type + this.targetAddr + this.targetPort + this.fromPort)
-            let a = 0
+            this.tunnelId = hashCode(this.type + this.targetAddr + this.targetPort + this.sourcePort)
         }
     }
 
     static From(jsonObj) {
-        return new ForwardInfo(jsonObj);
+        return new TunnelInfo(jsonObj);
     }
 }

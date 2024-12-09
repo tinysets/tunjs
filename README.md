@@ -11,6 +11,7 @@
 
 
 ## Introduction
+- tunnel
 - port mapping
 - A fast reverse proxy to help you expose a local server behind a NAT or firewall to the internet.
 - Support TCP & UDP.
@@ -55,22 +56,23 @@ will gen a client.json in your `pwd`
   "address": "127.0.0.1",
   "port": 7666,
   "authKey": "userkey1",
-  "forwardInfos": [
+  "tunnelInfos": [
     {
       "note": "for test",
-      "isLocalForward": true,
+      "isLocalTunnel": true,
       "type": "tcp",
       "targetAddr": "127.0.0.1",
       "targetPort": 46464,
-      "fromPort": 56565
+      "sourcePort": 56565
     },
     {
       "note": "for test",
-      "isLocalForward": false,
+      "isLocalTunnel": false,
       "type": "udp",
       "targetAddr": "127.0.0.1",
       "targetPort": 46464,
-      "fromPort": 56565
+      "sourcePort": 56565,
+      "timeout": 60
     }
   ]
 }

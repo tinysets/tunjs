@@ -2,12 +2,13 @@ import dgram from 'dgram'
 import { TCPOptions, TCPServer, TCPSession } from '../Socket/TCPServer'
 import { Pipe } from '../Common/Pipe'
 import { TCPClient } from '../Socket/TCPClient'
-import { CMD } from '../Common/CMD'
+import { Msg } from '../Common/Msg'
 import { TCPDataPacket, TCPPacket } from '../Common/TCPPacket'
-import { UDPClient, UDPServer, UDPSession } from '../Socket/UDPSocket'
-import { TCPTunnleWrapper } from './TCPTunnleWrapper'
+import { UDPServer, UDPSession } from '../Socket/UDPServer'
+import { VirtualEndPoint } from './VirtualEndPoint'
 import { EndPoint, TCPPacketable } from '../Common/interfaces'
-import { ForwardInfo } from '../Common/ForwardInfo'
+import { TunnelInfo } from '../Common/TunnelInfo'
+import { UDPClient } from '../Socket/UDPClient'
 
 export class UID {
     private static uid = 1
@@ -16,17 +17,17 @@ export class UID {
     }
 }
 
-export class PortMapping {
+export class Tunnel {
     isServer: boolean
-    tunnel: TCPPacketable
-    forwardInfo: ForwardInfo
+    node: TCPPacketable
+    tunnelInfo: TunnelInfo
     map: Map<number, Pipe> = new Map()
     tcpServer: TCPServer
     udpServer: UDPServer
-    constructor(isServer: boolean, tunnel: TCPPacketable, forwardInfo: ForwardInfo) {
+    constructor(isServer: boolean, node: TCPPacketable, tunnelInfo: TunnelInfo) {
         this.isServer = isServer
-        this.tunnel = tunnel;
-        this.forwardInfo = forwardInfo
+        this.node = node;
+        this.tunnelInfo = tunnelInfo
     }
 
     async start() {
@@ -34,17 +35,17 @@ export class PortMapping {
             return true;
         }
 
-        if (this.forwardInfo.type == 'tcp') {
+        if (this.tunnelInfo.type == 'tcp') {
             let options = new TCPOptions();
             options.usePacket = false;
             let tcpServer = new TCPServer(options);
-            tcpServer.setServer(this.forwardInfo.fromPort)
+            tcpServer.setServer(this.tunnelInfo.sourcePort)
             let succ = await tcpServer.start()
             if (!succ) {
                 console.error('本地代理启动失败!');
             } else {
                 this.tcpServer = tcpServer;
-                console.log(`tcp proxy server port:${this.forwardInfo.fromPort}`);
+                console.log(`tcp proxy server port:${this.tunnelInfo.sourcePort}`);
                 tcpServer.on('newConnect', (rometeSession: TCPSession) => {
                     this.onServerNewConnect(rometeSession)
                 })
@@ -52,13 +53,13 @@ export class PortMapping {
             return succ
         } else {
             let udpServer = new UDPServer(dgram.createSocket('udp4'));
-            udpServer.setServer(this.forwardInfo.fromPort)
+            udpServer.setServer(this.tunnelInfo.sourcePort)
             let succ = await udpServer.start()
             if (!succ) {
                 console.error('本地代理启动失败!');
             } else {
                 this.udpServer = udpServer;
-                console.log(`udp proxy server port:${this.forwardInfo.fromPort}`);
+                console.log(`udp proxy server port:${this.tunnelInfo.sourcePort}`);
                 udpServer.on('newConnect', (rometeSession: UDPSession) => {
                     this.onServerNewConnect(rometeSession)
                 })
@@ -71,16 +72,16 @@ export class PortMapping {
         let pipeId = UID.GetUID()
 
         let tcpPacket = new TCPPacket()
-        tcpPacket.Cmd = CMD.TCP_Connected
+        tcpPacket.Cmd = Msg.TCP_Connected
         let dataPacket = new TCPDataPacket();
-        dataPacket.mappingId = this.forwardInfo.mappingId;
+        dataPacket.tunnelId = this.tunnelInfo.tunnelId;
         dataPacket.pipeId = pipeId;
         tcpPacket.Data = dataPacket.Serialize()
-        this.tunnel.writePacket(tcpPacket)
+        this.node.writePacket(tcpPacket)
 
-        let tcpTunnleWrapper = new TCPTunnleWrapper(this.tunnel, this.forwardInfo.mappingId, pipeId)
-        let pipe = new Pipe(tcpTunnleWrapper, rometeSession);
-        pipe.tunnleWrapper = tcpTunnleWrapper;
+        let virtualEndPoint = new VirtualEndPoint(this.node, this.tunnelInfo.tunnelId, pipeId)
+        let pipe = new Pipe(virtualEndPoint, rometeSession);
+        pipe.virtualEndPoint = virtualEndPoint;
         pipe.on('close', () => {
             this.connectionClose(pipeId)
         })
@@ -92,7 +93,7 @@ export class PortMapping {
         }
     }
 
-    async onClientNewConnect(mappingId: number, pipeId: number) {
+    async onClientNewConnect(tunnelId: number, pipeId: number) {
         if (this.isServer) {
             return false
         }
@@ -100,15 +101,15 @@ export class PortMapping {
         if (this.map.has(pipeId)) {
             return false;
         }
-        if (this.forwardInfo.type == 'tcp') {
+        if (this.tunnelInfo.type == 'tcp') {
             let options = new TCPOptions();
             options.usePacket = false;
             let leftSession = new TCPClient(options);
-            leftSession.setClient(this.forwardInfo.targetPort, this.forwardInfo.targetAddr);
+            leftSession.setClient(this.tunnelInfo.targetPort, this.tunnelInfo.targetAddr);
 
-            let tcpTunnleWrapper = new TCPTunnleWrapper(this.tunnel, mappingId, pipeId);
-            let pipe = new Pipe(leftSession, tcpTunnleWrapper);
-            pipe.tunnleWrapper = tcpTunnleWrapper;
+            let virtualEndPoint = new VirtualEndPoint(this.node, tunnelId, pipeId);
+            let pipe = new Pipe(leftSession, virtualEndPoint);
+            pipe.virtualEndPoint = virtualEndPoint;
 
             pipe.on('close', () => {
                 this.connectionClose(pipeId)
@@ -121,11 +122,11 @@ export class PortMapping {
             return succ
         } else {
             let leftSession = new UDPClient(dgram.createSocket('udp4'));
-            leftSession.setClient(this.forwardInfo.targetPort, this.forwardInfo.targetAddr);
+            leftSession.setClient(this.tunnelInfo.targetPort, this.tunnelInfo.targetAddr);
 
-            let tcpTunnleWrapper = new TCPTunnleWrapper(this.tunnel, mappingId, pipeId);
-            let pipe = new Pipe(leftSession, tcpTunnleWrapper);
-            pipe.tunnleWrapper = tcpTunnleWrapper;
+            let virtualEndPoint = new VirtualEndPoint(this.node, tunnelId, pipeId);
+            let pipe = new Pipe(leftSession, virtualEndPoint);
+            pipe.virtualEndPoint = virtualEndPoint;
 
             pipe.on('close', () => {
                 this.connectionClose(pipeId)
@@ -179,55 +180,55 @@ export class PortMapping {
     }
 }
 
-export class PortMappingManager {
+export class TunnelManager {
 
-    private portMappingMap: Map<EndPoint, Map<number, PortMapping>> = new Map()
-    async newPortMapping(tcpSession: EndPoint, mappingId: number, portMapping: PortMapping) {
+    private tunnelMap: Map<EndPoint, Map<number, Tunnel>> = new Map()
+    async newTunnel(tcpSession: EndPoint, tunnelId: number, tunnel: Tunnel) {
 
-        if (!this.portMappingMap.has(tcpSession)) {
-            this.portMappingMap.set(tcpSession, new Map());
+        if (!this.tunnelMap.has(tcpSession)) {
+            this.tunnelMap.set(tcpSession, new Map());
         }
-        this.portMappingMap.get(tcpSession).set(mappingId, portMapping);
-        let succ = await portMapping.start();
+        this.tunnelMap.get(tcpSession).set(tunnelId, tunnel);
+        let succ = await tunnel.start();
         return succ;
     }
 
-    onRecvTunnleConnect(tcpSession: EndPoint, mappingId: number, pipeId: number) {
-        let map = this.portMappingMap.get(tcpSession)
+    onRecvTunnleConnect(tcpSession: EndPoint, tunnelId: number, pipeId: number) {
+        let map = this.tunnelMap.get(tcpSession)
         if (map) {
-            let portMapping = map.get(mappingId);
-            if (portMapping) {
-                portMapping.onClientNewConnect(mappingId, pipeId)
+            let tunnel = map.get(tunnelId);
+            if (tunnel) {
+                tunnel.onClientNewConnect(tunnelId, pipeId)
             }
         }
     }
 
-    onRecvTunnleClose(tcpSession: EndPoint, mappingId: number, pipeId: number) {
-        let map = this.portMappingMap.get(tcpSession)
+    onRecvTunnleClose(tcpSession: EndPoint, tunnelId: number, pipeId: number) {
+        let map = this.tunnelMap.get(tcpSession)
         if (map) {
-            let portMapping = map.get(mappingId);
-            if (portMapping) {
-                portMapping.onReceiveTunnleClose(pipeId)
+            let tunnel = map.get(tunnelId);
+            if (tunnel) {
+                tunnel.onReceiveTunnleClose(pipeId)
             }
         }
     }
 
-    onRecvTunnleData(tcpSession: EndPoint, mappingId: number, pipeId: number, buffer: Buffer) {
-        let map = this.portMappingMap.get(tcpSession)
+    onRecvTunnleData(tcpSession: EndPoint, tunnelId: number, pipeId: number, buffer: Buffer) {
+        let map = this.tunnelMap.get(tcpSession)
         if (map) {
-            let portMapping = map.get(mappingId);
-            if (portMapping) {
-                portMapping.onReceiveTunnleData(buffer, pipeId)
+            let tunnel = map.get(tunnelId);
+            if (tunnel) {
+                tunnel.onReceiveTunnleData(buffer, pipeId)
             }
         }
     }
 
     close(tcpSession: EndPoint) {
-        let map = this.portMappingMap.get(tcpSession)
+        let map = this.tunnelMap.get(tcpSession)
         if (map) {
-            this.portMappingMap.delete(tcpSession)
-            for (const portMapping of map.values()) {
-                portMapping.close()
+            this.tunnelMap.delete(tcpSession)
+            for (const tunnel of map.values()) {
+                tunnel.close()
             }
         }
     }

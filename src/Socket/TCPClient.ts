@@ -112,11 +112,10 @@ export class TCPClient extends Emitter implements TCPPacketable, EndPoint {
         }
     }
 
-    on(event: string, listener: (...args: any[]) => void): this;
     on(event: 'close', listener: () => void): this;
     on(event: 'data', listener: (data: Buffer) => void): this;
     on(event: 'packet', listener: (packet: TCPPacket) => void): this;
-    on(...args: [event: string, listener: (...args: any[]) => void]): this {
+    on(...args): this {
         super.on.call(this, ...args)
         return this
     }

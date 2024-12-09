@@ -2,8 +2,8 @@ import fs from 'fs';
 import { startServer } from './Server';
 import { startClient } from './Client';
 import { Command } from 'commander';
-import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
-import { ForwardInfo } from './Common/ForwardInfo';
+import { TCPLocalTunnel, UDPLocalTunnel } from './Tunnel/LocalTunnel';
+import { TunnelInfo } from './Common/TunnelInfo';
 
 {
     const clientProgram = new Command();
@@ -18,32 +18,38 @@ import { ForwardInfo } from './Common/ForwardInfo';
                     address: '127.0.0.1',
                     port: 7666,
                     authKey: 'userkey1',
-                    forwardInfos: [
-                        { note: 'for test', isLocalForward: true, type: 'tcp', targetAddr: '127.0.0.1', targetPort: 46464, fromPort: 56565 },
-                        { note: 'for test', isLocalForward: false, type: 'udp', targetAddr: '127.0.0.1', targetPort: 46464, fromPort: 56565 },
+                    tunnelInfos: [
+                        {
+                            note: 'for test', isLocalTunnel: true, type: 'tcp',
+                            targetAddr: '127.0.0.1', targetPort: 46464, sourcePort: 56565
+                        },
+                        {
+                            note: 'for test', isLocalTunnel: false, type: 'udp',
+                            targetAddr: '127.0.0.1', targetPort: 46464, sourcePort: 56565, timeout: 60
+                        },
                     ]
                 }
                 fs.writeFileSync('client.json', JSON.stringify(defualtConfig, null, 2), 'utf8')
             }
             let str = fs.readFileSync(options.config, 'utf8')
             let config = JSON.parse(str);
-            config.forwardInfos = config.forwardInfos.map((v) => ForwardInfo.From(v))
-            let forwardInfos: ForwardInfo[] = config.forwardInfos
+            config.tunnelInfos = config.tunnelInfos.map((v) => TunnelInfo.From(v))
+            let tunnelInfos: TunnelInfo[] = config.tunnelInfos
 
-            let localForwards = forwardInfos.filter((v) => v.isLocalForward);
-            let remoteForwards = forwardInfos.filter((v) => !v.isLocalForward);
+            let localTunnels = tunnelInfos.filter((v) => v.isLocalTunnel);
+            let remoteTunnels = tunnelInfos.filter((v) => !v.isLocalTunnel);
 
-            for (const localForward of localForwards) {
-                if (localForward.type == 'tcp') {
-                    let tcpLocalForward = new TCPLocalForward(localForward.fromPort, localForward.targetPort, localForward.targetAddr)
-                    await tcpLocalForward.start()
-                } else if (localForward.type == 'udp') {
-                    let udpLocalForward = new UDPLocalForward(localForward.fromPort, localForward.targetPort, localForward.targetAddr)
-                    await udpLocalForward.start()
+            for (const localTunnel of localTunnels) {
+                if (localTunnel.type == 'tcp') {
+                    let tcpLocalTunnel = new TCPLocalTunnel(localTunnel.sourcePort, localTunnel.targetPort, localTunnel.targetAddr)
+                    await tcpLocalTunnel.start()
+                } else if (localTunnel.type == 'udp') {
+                    let udpLocalTunnel = new UDPLocalTunnel(localTunnel.sourcePort, localTunnel.targetPort, localTunnel.targetAddr)
+                    await udpLocalTunnel.start()
                 }
             }
 
-            await startClient(remoteForwards, config.port, config.address, config.authKey)
+            await startClient(remoteTunnels, config.port, config.address, config.authKey)
         })
 
     const serverProgram = new Command();

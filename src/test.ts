@@ -1,7 +1,7 @@
 import dgram, { RemoteInfo } from 'dgram'
 import delay from 'delay';
 import { TCPPacket } from './Common/TCPPacket';
-import { UDPServer, UDPSession, UDPClient } from './Socket/UDPSocket';
+import { UDPServer, UDPSession } from './Socket/UDPServer';
 import { startServer } from './Server';
 import { startClient } from './Client';
 
@@ -125,31 +125,31 @@ let testTCPServer = async () => {
     tcpClient.write('tcp hello4')
     await delay(100)
 }
-let testTCPLocalForward = async () => {
+let testTCPLocalTunnel = async () => {
 
     let tcpServer = await Tester.TCPServer(7777)
 
-    { // tcp localPortForward 8888 --> 7777
-        let localPortForward = new TCPLocalForward(8888, 7777);
-        await localPortForward.start()
+    { // tcp localPortTunnel 8888 --> 7777
+        let localPortTunnel = new TCPLocalTunnel(8888, 7777);
+        await localPortTunnel.start()
     }
 
     let tcpClient = await Tester.TCPClient(8888)
 
-    tcpClient.write('local forward tcp hello1')
+    tcpClient.write('local tunnel tcp hello1')
     await delay(100)
-    tcpClient.write('local forward tcp hello2')
+    tcpClient.write('local tunnel tcp hello2')
     await delay(100)
-    tcpClient.write('local forward tcp hello3')
+    tcpClient.write('local tunnel tcp hello3')
     await delay(100)
-    tcpClient.write('local forward tcp hello4')
+    tcpClient.write('local tunnel tcp hello4')
     await delay(100)
 }
-let testTCPLocalForwardSpeed = async () => {
+let testTCPLocalTunnelSpeed = async () => {
 
-    { // tcp localPortForward 8888 --> 7777
-        let localPortForward = new TCPLocalForward(8888, 7777);
-        await localPortForward.start()
+    { // tcp localPortTunnel 8888 --> 7777
+        let localPortTunnel = new TCPLocalTunnel(8888, 7777);
+        await localPortTunnel.start()
     }
 
     // iperf3 -s -p 7777
@@ -160,30 +160,30 @@ let testTCPLocalForwardSpeed = async () => {
     // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec    0             sender
     // [  4]   0.00-5.00   sec  26.8 GBytes  46.1 Gbits/sec                  receiver
 
-    // local forward speed
+    // local tunnel speed
     // [ ID] Interval           Transfer     Bandwidth       Retr
     // [  4]   0.00-5.00   sec  7.89 GBytes  13.5 Gbits/sec    3             sender
     // [  4]   0.00-5.00   sec  7.88 GBytes  13.5 Gbits/sec                  receiver
 
 }
 let testTCPPing = async () => {
-    let forwardInfos: ForwardInfo[] = [
-        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, fromPort: 9999 }),
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, sourcePort: 9999 }),
     ];
     await startServer()
-    await startClient(forwardInfos)
+    await startClient(tunnelInfos)
     await delay(500)
 
-    { // localPortForward 8888 --> 7777
-        let localPortForward = new TCPLocalForward(8888, 7777);
-        await localPortForward.start()
+    { // localPortTunnel 8888 --> 7777
+        let localPortTunnel = new TCPLocalTunnel(8888, 7777);
+        await localPortTunnel.start()
     }
 
     { // server 7777
         let server = await Tester.TCPPacketServer(7777);
         server.on("newConnect", (session: TCPSession) => {
             session.on('packet', (packet: TCPPacket) => {
-                if (packet.Cmd == CMD.Ping) {
+                if (packet.Cmd == Msg.Ping) {
                     session.writePacket(packet);
                 }
             })
@@ -194,7 +194,7 @@ let testTCPPing = async () => {
         let rtts: number[] = []
         let tcpClient = await Tester.TCPPacketClient(7777);
         tcpClient.on('packet', (packet: TCPPacket) => {
-            if (packet.Cmd == CMD.Ping) {
+            if (packet.Cmd == Msg.Ping) {
                 let sendTime = packet.GetJsonData().time;
                 let currTime = Tester.Now();
                 let rtt = currTime - sendTime;
@@ -204,7 +204,7 @@ let testTCPPing = async () => {
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
-            packet.Cmd = CMD.Ping
+            packet.Cmd = Msg.Ping
             packet.SetJsonData({ time: Tester.Now().toString() });
             tcpClient.writePacket(packet)
         }, 100, 10);
@@ -221,7 +221,7 @@ let testTCPPing = async () => {
         let rtts: number[] = []
         let tcpClient = await Tester.TCPPacketClient(8888);
         tcpClient.on('packet', (packet: TCPPacket) => {
-            if (packet.Cmd == CMD.Ping) {
+            if (packet.Cmd == Msg.Ping) {
                 let sendTime = packet.GetJsonData().time;
                 let currTime = Tester.Now();
                 let rtt = currTime - sendTime;
@@ -231,7 +231,7 @@ let testTCPPing = async () => {
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
-            packet.Cmd = CMD.Ping
+            packet.Cmd = Msg.Ping
             packet.SetJsonData({ time: Tester.Now().toString() });
             tcpClient.writePacket(packet)
         }, 100, 10);
@@ -248,7 +248,7 @@ let testTCPPing = async () => {
         let rtts: number[] = []
         let tcpClient = await Tester.TCPPacketClient(9999);
         tcpClient.on('packet', (packet: TCPPacket) => {
-            if (packet.Cmd == CMD.Ping) {
+            if (packet.Cmd == Msg.Ping) {
                 let sendTime = packet.GetJsonData().time;
                 let currTime = Tester.Now();
                 let rtt = currTime - sendTime;
@@ -258,7 +258,7 @@ let testTCPPing = async () => {
 
         await Tester.Loop(() => {
             let packet = new TCPPacket();
-            packet.Cmd = CMD.Ping
+            packet.Cmd = Msg.Ping
             packet.SetJsonData({ time: Tester.Now().toString() });
             tcpClient.writePacket(packet)
         }, 100, 10);
@@ -277,14 +277,14 @@ let testTCPPing = async () => {
     // tcp remote proxy avg rtt = 1.118ms
 }
 
-let testTCPRemotePortMapping = async () => {
-    let forwardInfos: ForwardInfo[] = [
-        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, fromPort: 9999 }),
-        ForwardInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 8880, fromPort: 80 }),
-        ForwardInfo.From({ type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, fromPort: 443 }),
+let testTCPRemoteTunnel = async () => {
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 7777, sourcePort: 9999 }),
+        TunnelInfo.From({ type: 'tcp', targetAddr: '127.0.0.1', targetPort: 8880, sourcePort: 80 }),
+        TunnelInfo.From({ type: 'tcp', targetAddr: 'www.google.com', targetPort: 443, sourcePort: 443 }),
     ];
     await startServer()
-    await startClient(forwardInfos)
+    await startClient(tunnelInfos)
 
     await delay(1000)
 
@@ -317,32 +317,32 @@ let testUDPServer = async () => {
     udpClient.write('udp hello3')
     udpClient.write('udp hello4')
 }
-let testUDPLocalForward = async () => {
+let testUDPLocalTunnel = async () => {
 
     let udpServer = await Tester.UDPServer(7777)
 
-    { // udp localPortForward 8888 --> 7777
-        let udpLocalForward = new UDPLocalForward(8888, 7777);
-        await udpLocalForward.start()
+    { // udp localPortTunnel 8888 --> 7777
+        let udpLocalTunnel = new UDPLocalTunnel(8888, 7777);
+        await udpLocalTunnel.start()
     }
 
     let udpClient = await Tester.UDPClient(8888)
 
-    udpClient.write('local forward udp hello1')
-    udpClient.write('local forward udp hello2')
-    udpClient.write('local forward udp hello3')
-    udpClient.write('local forward udp hello4')
+    udpClient.write('local tunnel udp hello1')
+    udpClient.write('local tunnel udp hello2')
+    udpClient.write('local tunnel udp hello3')
+    udpClient.write('local tunnel udp hello4')
 }
-let testUDPLocalForwardSpeed = async () => {
+let testUDPLocalTunnelSpeed = async () => {
 
-    { // tcp localPortForward 8888 --> 7777
-        let localPortForward = new TCPLocalForward(8888, 7777);
-        await localPortForward.start()
+    { // tcp localPortTunnel 8888 --> 7777
+        let localPortTunnel = new TCPLocalTunnel(8888, 7777);
+        await localPortTunnel.start()
     }
 
-    { // udp localPortForward 8888 --> 7777
-        let udpLocalForward = new UDPLocalForward(8888, 7777);
-        await udpLocalForward.start()
+    { // udp localPortTunnel 8888 --> 7777
+        let udpLocalTunnel = new UDPLocalTunnel(8888, 7777);
+        await udpLocalTunnel.start()
     }
 
     // iperf3 -s -p 7777
@@ -353,7 +353,7 @@ let testUDPLocalForwardSpeed = async () => {
     // [  4]   0.00-5.00   sec  15.3 GBytes  26.2 Gbits/sec  0.052 ms  214146/748612 (29%)  
     // [  4] Sent 748612 datagrams
 
-    // local forward speed
+    // local tunnel speed
     // [ ID] Interval           Transfer     Bandwidth       Jitter    Lost/Total Datagrams
     // [  4]   0.00-5.00   sec  15.9 GBytes  27.4 Gbits/sec  0.876 ms  776224/780757 (99%)  
     // [  4] Sent 780757 datagrams
@@ -361,21 +361,21 @@ let testUDPLocalForwardSpeed = async () => {
 }
 
 let testUDPPing = async () => {
-    let forwardInfos: ForwardInfo[] = [
-        ForwardInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, fromPort: 9999 }),
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, sourcePort: 9999 }),
     ];
     await startServer()
-    await startClient(forwardInfos)
+    await startClient(tunnelInfos)
     await delay(500)
 
-    { // localPortForward 8888 --> 7777
-        let localPortForward = new UDPLocalForward(8888, 7777);
-        await localPortForward.start()
+    { // localPortTunnel 8888 --> 7777
+        let localPortTunnel = new UDPLocalTunnel(8888, 7777);
+        await localPortTunnel.start()
     }
 
     { // server 7777
         let server = await Tester.UDPServer(7777, false);
-        server.on("newConnect", (session: TCPSession) => {
+        server.on("newConnect", (session: UDPSession) => {
             session.on('data', (buffer: Buffer) => {
                 session.write(buffer);
             })
@@ -454,12 +454,12 @@ let testUDPPing = async () => {
     // udp remote proxy avg rtt = 1.083ms
 }
 
-let testUDPRemotePortMapping = async () => {
-    let forwardInfos: ForwardInfo[] = [
-        ForwardInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, fromPort: 9999 }),
+let testUDPRemoteTunnel = async () => {
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'udp', targetAddr: '127.0.0.1', targetPort: 7777, sourcePort: 9999 }),
     ];
     await startServer()
-    await startClient(forwardInfos)
+    await startClient(tunnelInfos)
 
     await delay(1000)
 
@@ -478,21 +478,21 @@ let testUDPRemotePortMapping = async () => {
     client1.write('client1 hello')
 }
 
-let testRemoteForwardSpeed = async () => {
+let testRemoteTunnelSpeed = async () => {
     // on linux
     // iperf3 -s -p 7777
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
 
-    let forwardInfos: ForwardInfo[] = [
-        ForwardInfo.From({ type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, fromPort: 9999 }),
-        ForwardInfo.From({ type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, fromPort: 9999 }),
+    let tunnelInfos: TunnelInfo[] = [
+        TunnelInfo.From({ type: 'tcp', targetAddr: '10.21.248.180', targetPort: 7777, sourcePort: 9999 }),
+        TunnelInfo.From({ type: 'udp', targetAddr: '10.21.248.180', targetPort: 7777, sourcePort: 9999 }),
     ];
 
     if (process.platform == 'linux') {
         await startServer()
     } else if (process.platform == 'win32') {
-        await startClient(forwardInfos, 7666, '10.21.248.180')
+        await startClient(tunnelInfos, 7666, '10.21.248.180')
     }
     // iperf3 -c 127.0.0.1 -b 1000G -t 5 -p 9999 -u
     // udp proxy client
@@ -537,24 +537,25 @@ let testRemoteForwardSpeed = async () => {
 import header from 'rollup-plugin-header'
 import { TCPOptions, TCPServer, TCPSession } from './Socket/TCPServer';
 import { TCPClient } from './Socket/TCPClient';
-import { CMD } from './Common/CMD';
-import { TCPLocalForward, UDPLocalForward } from './PortMapping/LocalForward';
-import { ForwardInfo } from './Common/ForwardInfo';
+import { Msg } from './Common/Msg';
+import { TCPLocalTunnel, UDPLocalTunnel } from './Tunnel/LocalTunnel';
+import { TunnelInfo } from './Common/TunnelInfo';
+import { UDPClient } from './Socket/UDPClient';
 
 
 let main = async () => {
     // testTCPServer();
-    // testTCPLocalForward();
-    // testTCPLocalForwardSpeed()
+    // testTCPLocalTunnel();
+    // testTCPLocalTunnelSpeed()
     // await testTCPPing()
-    testTCPRemotePortMapping()
+    testTCPRemoteTunnel()
 
     // testUDPServer();
-    // testUDPLocalForward();
-    // testUDPLocalForwardSpeed()
+    // testUDPLocalTunnel();
+    // testUDPLocalTunnelSpeed()
     // await testUDPPing()
-    // testUDPRemotePortMapping()
-    // testRemoteForwardSpeed()
+    // testUDPRemoteTunnel()
+    // testRemoteTunnelSpeed()
 }
 
 let he = header

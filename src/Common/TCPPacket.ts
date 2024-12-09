@@ -80,13 +80,13 @@ export class TCPBufferHandler {
 
 
 export class TCPDataPacket {
-    mappingId: number
+    tunnelId: number
     pipeId: number
     buffer: Buffer
 
     public UnSerialize(data: Buffer) {
         if (data.length >= 8) {
-            this.mappingId = data.readUInt32LE(0)
+            this.tunnelId = data.readUInt32LE(0)
             this.pipeId = data.readUInt32LE(4)
             if (data.length > 8) {
                 this.buffer = data.subarray(8)
@@ -100,7 +100,7 @@ export class TCPDataPacket {
             length += this.buffer.length
         }
         let data = Buffer.allocUnsafe(length)
-        data.writeUint32LE(this.mappingId, 0)
+        data.writeUint32LE(this.tunnelId, 0)
         data.writeUint32LE(this.pipeId, 4)
         if (this.buffer && this.buffer.length > 0) {
             this.buffer.copy(data, 8, 0)

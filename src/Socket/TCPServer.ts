@@ -2,8 +2,6 @@ import Emitter from 'events'
 import net from 'net'
 import once from 'once'
 import { TCPBufferHandler, TCPPacket, } from '../Common/TCPPacket';
-import { Pipe } from '../Common/Pipe';
-import { TCPClient } from './TCPClient';
 import { EndPoint, TCPPacketable } from '../Common/interfaces';
 
 export class TCPOptions {
@@ -61,10 +59,9 @@ export class TCPServer extends Emitter {
         }
     }
 
-    on(event: string, listener: (...args: any[]) => void): this;
     on(event: 'close', listener: () => void): this;
     on(event: 'newConnect', listener: (session: TCPSession) => void): this;
-    on(...args: [event: string, listener: (...args: any[]) => void]): this {
+    on(...args): this {
         super.on.call(this, ...args)
         return this
     }
@@ -147,11 +144,10 @@ export class TCPSession extends Emitter implements TCPPacketable, EndPoint {
         }
     }
 
-    on(event: string, listener: (...args: any[]) => void): this;
     on(event: 'close', listener: () => void): this;
     on(event: 'data', listener: (data: Buffer) => void): this;
     on(event: 'packet', listener: (packet: TCPPacket) => void): this;
-    on(...args: [event: string, listener: (...args: any[]) => void]): this {
+    on(...args): this {
         super.on.call(this, ...args)
         return this
     }

@@ -108,6 +108,7 @@ export class UDPSession extends Emitter implements EndPoint {
     timeout: number = 30
     private closed = false
     async start() {
+        this.activeTime = Date.now() / 1000;
         return true;
     }
 

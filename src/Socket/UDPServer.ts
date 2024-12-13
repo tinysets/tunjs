@@ -74,7 +74,7 @@ export class UDPServer extends Emitter {
         if (this.socket) {
             let socket = this.socket;
             this.socket = null;
-            socket.close(()=>{
+            socket.close(() => {
                 console.log(`udp server ${this.port} closed!`)
             })
             this.sessionManager.stopCheck();
@@ -113,13 +113,13 @@ export class UDPSession extends Emitter implements EndPoint {
 
     onReceiveData(buffer: Buffer): void {
         if (!this.closed) {
-            this.activeTime = Date.now();
+            this.activeTime = Date.now() / 1000;
             this.emit('data', buffer)
         }
     }
     write(buffer: string | Uint8Array): void {
         if (!this.closed) {
-            this.activeTime = Date.now();
+            this.activeTime = Date.now() / 1000;
             this.server.write(buffer, this.port, this.address)
         }
     }
@@ -175,7 +175,7 @@ export class UDPSessionManager {
 
     private checkDeadSession() {
         let toCloses: UDPSession[] = [];
-        let now = Date.now()
+        let now = Date.now() / 1000;
         for (const session of this.mapByStr.values()) {
             let dt = now - session.activeTime
             if (session.timeout != 0 && dt > session.timeout) {

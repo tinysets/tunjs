@@ -42,10 +42,10 @@ export class Tunnel {
             tcpServer.setServer(this.tunnelInfo.sourcePort)
             let succ = await tcpServer.start()
             if (!succ) {
-                console.error('本地代理启动失败!');
+                console.error(`tcp server Tunnel start failed! targetAddr:${this.tunnelInfo.targetAddr}, targetPort:${this.tunnelInfo.targetPort}, sourcePort(serverPort):${this.tunnelInfo.sourcePort}`);
             } else {
+                console.error(`tcp server Tunnel start success! targetAddr:${this.tunnelInfo.targetAddr}, targetPort:${this.tunnelInfo.targetPort}, sourcePort(serverPort):${this.tunnelInfo.sourcePort}`);
                 this.tcpServer = tcpServer;
-                console.log(`tcp proxy server port:${this.tunnelInfo.sourcePort}`);
                 tcpServer.on('newConnect', (rometeSession: TCPSession) => {
                     this.onServerNewConnect(rometeSession)
                 })
@@ -56,10 +56,10 @@ export class Tunnel {
             udpServer.setServer(this.tunnelInfo.sourcePort)
             let succ = await udpServer.start()
             if (!succ) {
-                console.error('本地代理启动失败!');
+                console.error(`udp server Tunnel start failed! targetAddr:${this.tunnelInfo.targetAddr}, targetPort:${this.tunnelInfo.targetPort}, sourcePort(serverPort):${this.tunnelInfo.sourcePort}`);
             } else {
+                console.error(`udp server Tunnel start success! targetAddr:${this.tunnelInfo.targetAddr}, targetPort:${this.tunnelInfo.targetPort}, sourcePort(serverPort):${this.tunnelInfo.sourcePort}`);
                 this.udpServer = udpServer;
-                console.log(`udp proxy server port:${this.tunnelInfo.sourcePort}`);
                 udpServer.on('newConnect', (rometeSession: UDPSession) => {
                     this.onServerNewConnect(rometeSession)
                 })
@@ -84,12 +84,15 @@ export class Tunnel {
         pipe.virtualEndPoint = virtualEndPoint;
         pipe.on('close', () => {
             this.connectionClose(pipeId)
+            console.info(`server pipe close! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
         })
 
         this.map.set(pipeId, pipe)
         let succ = await pipe.link()
         if (!succ) {
-            console.error(`远程代理 本地session创建失败! pipeId=${pipeId}`);
+            console.error(`server pipe link failed! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
+        } else {
+            console.error(`server pipe link success! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
         }
     }
 
@@ -113,11 +116,14 @@ export class Tunnel {
 
             pipe.on('close', () => {
                 this.connectionClose(pipeId)
+                console.info(`tcp client pipe close! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
             })
             this.map.set(pipeId, pipe)
             let succ = await pipe.link()
             if (!succ) {
-                console.error(`远程代理 本地session创建失败! id=${pipeId}`);
+                console.error(`tcp client pipe link failed! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
+            } else {
+                console.info(`tcp client pipe link success! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
             }
             return succ
         } else {
@@ -130,11 +136,14 @@ export class Tunnel {
 
             pipe.on('close', () => {
                 this.connectionClose(pipeId)
+                console.info(`udp client pipe close! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
             })
             this.map.set(pipeId, pipe)
             let succ = await pipe.link()
             if (!succ) {
-                console.error(`远程代理 本地session创建失败! id=${pipeId}`);
+                console.error(`udp client pipe link failed! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
+            } else {
+                console.error(`udp client pipe link success! pipeId=${pipeId}, tunnelInfo={type=${this.tunnelInfo.type}, targetAddr=${this.tunnelInfo.targetAddr}, targetPort=${this.tunnelInfo.targetPort}, sourcePort=${this.tunnelInfo.sourcePort}}`);
             }
             return succ
         }

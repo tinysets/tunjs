@@ -31,9 +31,9 @@ export class TCPLocalTunnel {
         this.server = tunnelServer;
         let succ = await tunnelServer.start()
         if (!succ) {
-            console.error('本地代理启动失败!');
+            console.error(`TCPLocalTunnel start failed! leftPort:${this.leftPort}, leftAddr:${this.leftAddr}, rightPort(serverPort):${this.rightPort}`);
         } else {
-            console.log(`local tcp proxy server port:${this.rightPort}`);
+            console.error(`TCPLocalTunnel start success! leftPort:${this.leftPort}, leftAddr:${this.leftAddr}, rightPort(serverPort):${this.rightPort}`);
         }
     }
 }
@@ -63,9 +63,9 @@ export class UDPLocalTunnel {
         this.server = tunnelServer;
         let succ = await tunnelServer.start()
         if (!succ) {
-            console.error('本地代理启动失败!');
+            console.error(`UDPLocalTunnel start failed! leftPort:${this.leftPort}, leftAddr:${this.leftAddr}, rightPort(serverPort):${this.rightPort}`);
         } else {
-            console.log(`local udp proxy server port:${this.rightPort}`);
+            console.info(`UDPLocalTunnel start success! leftPort:${this.leftPort}, leftAddr:${this.leftAddr}, rightPort(serverPort):${this.rightPort}`);
         }
     }
 }
